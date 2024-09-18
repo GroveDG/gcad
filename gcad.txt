@@ -1,0 +1,152 @@
+===========================
+Units
+===========================
+
+
+Distance
+-----------------
+The standard distance units of GCAD are the SI units. GCAD interpreters
+should support all current metric prefixes for the meter.
+
+Examples:
+|A B| = 5km 4hm 2dam 1m 5dm 7cm 3mm
+
+The metric prefix μ can be alternately written as u.
+|B C| = 100μm
+|C D| = 100um
+
+Imperial units can also be specified. Supported imperial units are
+miles, yards, feet, inches, and thousandths.
+
+Examples:
+|D E| = 20mi 3yd 2ft 6in 200thou
+|E F| = 20mi 3yd 2'6" 200th
+
+Where units are unspecified, quantities are unitless.
+
+Examples:
+|F G| = 20.124
+
+
+Angles
+-----------------
+Angles can be specified in radians (rad), degrees (d, deg, °),
+gradians (grad), or revolutions (rev).
+
+
+
+===========================
+Elements
+===========================
+
+
+Points
+-----------------
+Points are implied in the definitions of other geometric elements.
+Points are separated by spaces when used together. Notational
+convention is that points are named alphabetically in all caps.
+After point Z, add a second digit starting again from AA and so on.
+However, points can be named anything that is soley alphabetical.
+
+
+Lines
+-----------------
+Line segments, rays, and lines are all defined in the same way.
+They are a pair of points (separated by spaces) encapsulated by
+one of two line endings:
+
+-> for infinite line endings
+- for finite line endings
+
+Any lines defined on their own (and not in a relation) are drawn
+all others are used only for solving.
+
+Examples:
+-A B- for a line segment
+-A B-> for a ray
+<-A B-> for a line
+
+
+Angles
+-----------------
+< or ∠ followed by the three points of the angle (separated by spaces).
+
+Examples:
+<A B C or ∠A B C
+
+
+Triangles
+-----------------
+Angles implicitly define the triangle they are a part of. This triangle
+is not draw by default, but can have implications for other elements.
+
+Since angles in GCAD have no direction (they are neither CW or CCW),
+Triangles with a shared edge have two ambiguous states: overlapping
+or neighboring.
+
+To disambiguate, GCAD borrows notation from origami and other papercraft.
+
+-- denotes a mountain fold, here interpreted as overlapping.
+-. denotes a valley fold, here inerpreted as neighboring.
+
+Triangles are assumed by default to be neighboring unless specified.
+
+Examples:
+--A B--
+-.A B-.
+
+
+
+===========================
+Relations
+===========================
+
+
+Colinearity
+-----------------
+Points are specified to be colinear by an unordered hyphen-separated
+list.
+
+Examples:
+A-B-C
+
+
+Parallel
+-----------------
+Lines are specified to be parallel when separated by || or ∥ with
+optional spaces on either side of the operator.
+
+Examples:
+<-A B->||<-C D->
+<-A B-> ∥ <-C D->
+
+
+Perpendicular
+-----------------
+Lines are specified to be perpendicular when separated by _|_ or ⊥
+with optional spaces on either side of the operator.
+
+Examples:
+<-A B->_|_<-C D->
+<-A B-> ⊥ <-C D->
+
+
+Equality/Congruency
+-----------------
+Two elements of the same type are declared equal in measure by =
+with optional spaces on either side of the operator.
+
+Examples:
+|A B|=|B C|
+∠A B C = ∠B C A
+
+This measure can be defined using a numerical value.
+
+Examples:
+|A B|=70
+
+Congruency and equality statements can be combined into multiple
+equalities. These statements may only contain 1 numerical value.
+
+Examples:
+∠A B C = ∠B C A = 1rad
