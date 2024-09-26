@@ -27,7 +27,7 @@ def solve(exprs: List[BaseExpr]):
     for tri_id, tri in graph.nodes(data="tri", default=None):
         print(tri_id, tri)
     nx.draw_networkx(graph)
-    plt.show()
+    #plt.show()
 
     size = turtle.screensize()
     points = {}
@@ -58,7 +58,9 @@ def solve(exprs: List[BaseExpr]):
 
                 start_point = points[start]
                 end_point = points[end]
-                turtle.teleport(start_point[0], start_point[1])
+                turtle.penup()
+                turtle.setpos(start_point[0], start_point[1])
+                turtle.pendown()
                 turtle.setheading(turtle.towards(end_point))
                 point_pos = tri.draw(start=start_index, names=point_ids)
         for point, point_id in zip(point_pos, point_ids):

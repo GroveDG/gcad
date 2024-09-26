@@ -8,6 +8,7 @@ import networkx as nx
 from networkx import set_node_attributes
 from abc import abstractmethod, ABCMeta
 from tri import Triangle
+from graph import add_tri
 
 UREG = UnitRegistry()
 
@@ -109,9 +110,7 @@ class Angle(ElementExpr):
     def apply(self, graph: Graph):
         tri_id = self.tri_id
         if not graph.has_node(tri_id):
-            tri = Triangle()
-            graph.add_node(tri_id)
-            graph.nodes[tri_id]["tri"] = tri
+        	tri = add_tri(graph, tri_id)
     
     def assign(self, graph: Graph, value):
         tri_id = self.tri_id

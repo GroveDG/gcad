@@ -3,7 +3,6 @@ from math import sin, cos, tan, asin, acos, atan, pi as PI, sqrt
 from argparse import ArgumentParser
 from turtle import *
 from util import ff
-from itertools import batched
 from collections import deque
 
 @dataclass
@@ -56,7 +55,7 @@ class Triangle:
         points = []
 
         for side, angle, name in seq:
-            write(f"{f"{name}=" if name != "" else ""}{ff(angle)}", align="center")
+            #write(f"{f"{name}=" if name != "" else ""}{ff(angle)}", align="center")
             points.append(position())
             forward(side/2)
             write(f"{ff(side)}", align="center")

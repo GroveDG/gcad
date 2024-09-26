@@ -7,6 +7,11 @@ from textwrap import wrap
 from itertools import zip_longest
 from solve import solve
 
+def solve_file(filepath):
+	exprs = read_file(filepath)
+	exprs = [parse_expr(expr) for expr in exprs]
+	solve(exprs)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="GCAD Test Suite",
@@ -48,6 +53,4 @@ if __name__ == "__main__":
                         Fore.RESET
                     )
         case "solve":
-            exprs = read_file(args.filepath)
-            exprs = [parse_expr(expr) for expr in exprs]
-            solve(exprs)
+            solve_file(args.filepath)
