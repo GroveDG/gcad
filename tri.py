@@ -1,123 +1,103 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import sin, cos, tan, asin, acos, atan, pi as PI, sqrt
 from argparse import ArgumentParser
 from turtle import *
 from util import ff
 from collections import deque
+from typing import List
 
 @dataclass
 class Triangle:
-    a: float|None = None
-    b: float|None = None
-    c: float|None = None
-    A: float|None = None
-    B: float|None = None
-    C: float|None = None
-    ccw: bool = False
-    
+    angles: List[float] = field(default_factory=lambda: [None, None, None])
+    edges: List[float] = field(default_factory=lambda: [None, None, None])
+
     def solve(self):
-        self.a, self.b, self.c, self.A, self.B, self.C = solve_tri(
-            self.a,
-            self.b,
-            self.c,
-            self.A,
-            self.B,
-            self.C
-        )
+        self.angles, self.edges = solve_tri(self.angles, self.edges)
 
     @property
     def solved(self):
         return (
-            self.a != None and
-            self.b != None and
-            self.c != None and
-            self.A != None and
-            self.B != None and
-            self.C != None
+            all([edge != None for edge in self.edges]) and
+            all([angle != None for angle in self.angles])
         )
     
     def draw(self, start=0, names=["", "", ""]):
         radians()
-        sides = deque([self.a, self.b, self.c])
-        angles = deque([self.A, self.B, self.C])
+        edges = deque(self.edges.copy())
+        angles = deque(self.angles.copy())
 
-        if self.ccw:
-            sides.reverse()
-            angles.reverse()
+        # if self.ccw:
+        #     sides.reverse()
+        #     angles.reverse()
 
-        sides.rotate(1)
+        edges.rotate(1)
         angles.rotate(-1)
 
-        seq = deque(zip(sides, angles, names))
+        seq = deque(zip(edges, angles, names))
 
         seq.rotate(2*start)
 
         points = []
 
-        for side, angle, name in seq:
+        for edge, angle, name in seq:
             #write(f"{f"{name}=" if name != "" else ""}{ff(angle)}", align="center")
             points.append(position())
-            forward(side/2)
-            write(f"{ff(side)}", align="center")
-            forward(side/2)
+            forward(edge/2)
+            write(f"{ff(edge)}", align="center")
+            forward(edge/2)
             ext_angle = PI-angle # Convert interior to exterior angle
-            if self.ccw: right(ext_angle)
-            else: left(ext_angle)
+            # if self.ccw: right(ext_angle)
+            left(ext_angle)
         
         return points
 
     def __str__(self) -> str:
-        return f"Triangle( a = {ff(self.a)}, b = {ff(self.b)}, c = {ff(self.c)}, A = {ff(self.A)}, B = {ff(self.B)}, C = {ff(self.C)} )"
+        return f"Triangle( Angles: {self.angles}   Edges: {self.edges} )"
 
-def solve_tri(
-        a, b, c,
-        A, B, C
-    ):
+def solve_tri(angles: List[float], edges: List[float]):
     # Angle Sum
-    if A and B: C = PI - (A + B)
-    if B and C: A = PI - (B + C)
-    if C and A: B = PI - (C + A)
+    if angles.count(None) == 1:
+        n = angles.index(None)
+        angles[n] = PI - (angles[n-1] + angles[n-2])
 
+    # Law of Cosines
+    for n in range(3):
+        if not edges[n-1] or not edges[n-2]:
+            continue
+        if angles[n] and not edges[n]:
+            edges[n] = law_of_cosines_side(edges[n-1], edges[n-2], angles[n])
+        if edges[n] and not angles[n]:
+            angles[n] = law_of_cosines_angle(edges[n], edges[n-1], edges[n-2])
+
+    # Law of Sines
     sines_value = None
-    if b and c:
-        if A:
-            a = law_of_cosines_side(b, c, A)
-        elif a:
-            A = law_of_cosines_angle(a, b, c)
-    if c and a:
-        if B:
-            b = law_of_cosines_side(c, a, B)
-        elif b:
-            B = law_of_cosines_angle(b, c, a)
-    if a and b:
-        if C:
-            c = law_of_cosines_side(a, b, C)
-        elif c:
-            C = law_of_cosines_angle(c, a, b)
-    
-    if A and a: sines_value = a/sin(A)
-    if B and b: sines_value = b/sin(B)
-    if C and c: sines_value = c/sin(C)
-
-    if a and not A: A = asin(a / sines_value)
-    if b and not B: B = asin(b / sines_value)
-    if c and not C: C = asin(c / sines_value)
+    for n in range(3):
+        if angles[n] and edges[n]:
+            sines_value = edges[n]/sin(angles[n])
+            break
+        
+    if sines_value:
+        for n in range(3):
+            if edges[n] and not angles[n]:
+                angles[n] = asin(edges[n] / sines_value)
 
     # Angle Sum
-    if A and B and not C: C = PI - (A + B)
-    if B and C and not A: A = PI - (B + C)
-    if C and A and not B: B = PI - (C + A)
+    if angles.count(None) == 1:
+        n = angles.index(None)
+        angles[n] = PI - (angles[n-1] + angles[n-2])
 
-    if A and not a: a = sin(A) * sines_value
-    if B and not b: b = sin(B) * sines_value
-    if C and not c: c = sin(C) * sines_value
+    # Law of Sines
+    for n in range(3):
+        if angles[n] and not edges[n]:
+            edges[n] = sin(angles[n]) * sines_value
 
-    if a and b and c and A and B and C:
-        return a, b, c, A, B, C
+    if all(angles) and all(edges):
+        return angles, edges
     else:
         raise ValueError(f"""
             Calculation Error: Underspecified triangle.
-            a: {a}, b: {b}, c: {c}, A: {A}, B: {B}, C: {C}
+            Angles: {angles}
+            Edges: {edges}
         """)
 
 def law_of_cosines_side(b, c, A):

@@ -1,14 +1,11 @@
 
 from dataclasses import dataclass
 from typing import List, Set, Self
-from networkx import Graph
+from graph import TriGraph, regularize_id
 from pyparsing import Opt, ParseResults, Word, alphas, one_of, DelimitedList, pyparsing_common, Combine
 from pint import UnitRegistry
-import networkx as nx
-from networkx import set_node_attributes
 from abc import abstractmethod, ABCMeta
 from tri import Triangle
-from graph import add_tri
 
 UREG = UnitRegistry()
 
@@ -22,11 +19,11 @@ class BaseExpr():
     symbol = "�"
 
     @abstractmethod
-    def apply(self, graph: nx.Graph): pass
+    def apply(self, graph: TriGraph): pass
 
 class ElementExpr(BaseExpr):
     @abstractmethod
-    def assign(self, graph: nx.Graph, value): pass
+    def assign(self, graph: TriGraph, value): pass
 
 # === Geometry ===
 
@@ -44,7 +41,7 @@ class Point(BaseExpr):
     def __str__(self) -> str:
         return self.id
 
-    # def apply(self, graph: nx.Graph):
+    # def apply(self, graph: nx.TriGraph):
     #     graph.add_node(self.id)f"{
 Point.parser.set_parse_action(Point)
 
@@ -67,7 +64,7 @@ class Line(ElementExpr):
         self.start_term = hasattr(res, "start_term")
         self.end_term = hasattr(res, "end_term")
 
-    # def apply(self, graph: nx.Graph):
+    # def apply(self, graph: nx.TriGraph):
     #     graph.add_edge(self.start.id, self.end.id)
 Line.parser.set_parse_action(Line)
 
@@ -91,31 +88,13 @@ class Angle(ElementExpr):
     
     @property
     def points(self):
-        points = [self.start, self.vertex, self.end]
-        points.sort(key=lambda point: point.id)
-        return points
-
-    @property
-    def tri_id(self):
-        return " ".join([point.id for point in self.points])
+        return [self.start, self.vertex, self.end]
     
-    @property
-    def index(self):
-        index = self.points.index(self.vertex)
-        match index:
-            case 0: return "A"
-            case 1: return "B"
-            case 2: return "C"
+    def apply(self, graph: TriGraph):
+        pass
     
-    def apply(self, graph: Graph):
-        tri_id = self.tri_id
-        if not graph.has_node(tri_id):
-        	tri = add_tri(graph, tri_id)
-    
-    def assign(self, graph: Graph, value):
-        tri_id = self.tri_id
-        tri = graph.nodes[tri_id]["tri"]
-        setattr(tri, self.index, value)
+    def assign(self, graph: TriGraph, value):
+        graph[*self.points] = value
 Angle.parser.set_parse_action(Angle)
 
 class Collinear(BaseExpr):
@@ -166,33 +145,16 @@ class Distance(ElementExpr):
     start: Point
     end: Point
 
-    def in_tri(self, tri_id: str):
-        return (
-            self.start.id in tri_id.split(" ") and
-            self.end.id in tri_id.split(" ")
-        )
-    
-    def index(self, tri_id: str):
-        points = tri_id.split(" ")
-        start_index = points.index(self.start.id)
-        end_index = points.index(self.end.id)
-        index = [0, 1, 2]
-        index.remove(start_index)
-        index.remove(end_index)
-        index = index[0]
-        match index:
-            case 0: return "a"
-            case 1: return "b"
-            case 2: return "c"
-
     def __init__(self, res: ParseResults) -> None:
         self.start = res.start
         self.end = res.end
-    def assign(self, graph: Graph, value):
-        for node in graph.nodes:
-            if self.in_tri(node):
-                tri = graph.nodes[node]["tri"]
-                setattr(tri, self.index(node), value)
+    
+    @property
+    def points(self):
+        return [self.start, self.end]
+        
+    def assign(self, graph: TriGraph, value):
+        graph[*self.points] = value
 Distance.parser.add_parse_action(Distance)
 
 class Equality(BaseExpr):
@@ -208,7 +170,7 @@ class Equality(BaseExpr):
         for expr in res.exprs:
             self.exprs.append(expr[0])
     
-    def apply(self, graph: Graph):
+    def apply(self, graph: TriGraph):
         exprs = list(self.exprs)
         for expr in exprs:
             if isinstance(expr, ElementExpr):
