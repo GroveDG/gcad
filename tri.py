@@ -24,11 +24,19 @@ class Triangle:
     def __str__(self) -> str:
         return f"Triangle( Angles: {self.angles}   Edges: {self.edges} )"
     
-    def coordinate(self, points=[Vec2D(0,0),None,None]) -> List[Vec2D]:
+    def coordinate(self, points=[Vec2D(0,0),None,None], reverse=False) -> List[Vec2D]:
+        if reverse: points.reverse()
+
         if not any(points):
             points[0] = Vec2D(0,0)
+
         angles = deque(self.angles)
-        angles.rotate(1)
+        if not reverse: angles.rotate(1)
+        if reverse: angles.reverse()
+
+        edges = deque(self.edges)
+        if reverse: edges.rotate(1)
+        if reverse: edges.reverse()
 
         start = 0
         for i, point in enumerate(points):
@@ -36,7 +44,7 @@ class Triangle:
                 start = i
                 break
 
-        seq = deque(zip(angles, self.edges))
+        seq = deque(zip(angles, edges))
         seq.rotate(-start)
         seq = list(seq)
 
@@ -54,11 +62,11 @@ class Triangle:
             point = point.rotate(total_angle)
             total_angle += to_degrees(PI - angle)
             point += points[i]
-            # if points[i+1] == None:
             points[i+1] = point
         print(points)
         
         points.rotate(start)
+        if reverse: points.reverse()
         points = list(points)
         
         return points

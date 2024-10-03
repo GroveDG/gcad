@@ -53,7 +53,7 @@ class TriGraph():
 		self._points = {}
 		self._edges = {}
 		self._angles = {}
-		self._tris: Set[str] = set()
+		self._tris = {}
 	
 	def _add_point(self, id: str):
 		if not id in self._points:
@@ -75,7 +75,7 @@ class TriGraph():
 				self._angles[angle] = None
 		
 		if not id in self._tris:
-			self._tris.add(id)
+			self._tris[id] = None
 
 	def __getitem__(self, indices):
 		indices = regularize_id(indices, angle=True)
@@ -210,16 +210,16 @@ class TriGraph():
 
 		print(tri_dir)
 		
-		return tri_dir
+		self._tris = tri_dir
 	
 	def coordinate(self):
 		if not self.solved:
 			raise ValueError(f"Figure not solved when coordinating.")
 
-		for id in self._tris:
+		for id, dir in self._tris.items():
 			tri = self._get_tri(id)
 			point_ids = id.split(" ")
-			points = tri.coordinate([self[point_id] for point_id in point_ids])
+			points = tri.coordinate([self[point_id] for point_id in point_ids], dir)
 			for point_id, point in zip(point_ids, points):
 				self._points[point_id] = point
 			
