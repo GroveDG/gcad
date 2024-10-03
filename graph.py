@@ -1,7 +1,10 @@
 import networkx as nx
 from tri import Triangle
-from typing import List, Iterable
+from typing import List, Iterable, Set
 from collections import deque
+from functools import lru_cache
+from matplotlib import pyplot
+import turtle
 
 def regularize_id(id, angle=False) -> str:
 	if isinstance(id, str):
@@ -18,12 +21,14 @@ def regularize_id(id, angle=False) -> str:
 		id.sort()
 	return " ".join(id)
 
-def edges_from_tri(tri: str) -> List[str]:
+@lru_cache
+def edges_from_tri(tri: str, regularize=True) -> List[str]:
 	points = deque(tri.split(" "))
 	endpoints = points.copy()
 	endpoints.rotate(-1)
-	return [regularize_id(edge) for edge in zip(points, endpoints)]
+	return [regularize_id(edge) if regularize else " ".join(edge) for edge in zip(points, endpoints)]
 
+@lru_cache
 def angles_from_tri(tri: str) -> List[str]:
 	points = deque(tri.split(" "))
 	points.rotate(-1)
@@ -48,7 +53,7 @@ class TriGraph():
 		self._points = {}
 		self._edges = {}
 		self._angles = {}
-		self._tris = set()
+		self._tris: Set[str] = set()
 	
 	def _add_point(self, id: str):
 		if not id in self._points:
@@ -150,3 +155,84 @@ class TriGraph():
 
 		if not self.solved:
 			raise ValueError(f"Figure not solved.\n{self._angles}\n{self._edges}")
+
+	# shared edges need to be traversed in opposite orders to prevent overlap
+	def connect(self):
+		edge_tris = {}
+		graph = nx.Graph()
+
+		for id in self._tris:
+			edges = edges_from_tri(id)
+
+			# is the edge traversed in regular (alphabetical) order
+			# if two edges are traversed in the same order, they must
+			# turn opposite directions so they don't overlap.
+			# if two edges are traversed in opposite order, they must
+			# turn the same direction so they don't overlap.
+
+			# the use of a combined node allows direction to be determined
+			# using 2-coloring of the resulting bipartite graph
+			# this needs to be done because the last edge is traversed
+			# in the opposite order from the others
+
+			# TODO: Consider using the first point as a vertex and
+			# drawing the other two with respect to that to create an
+			# unordered system
+			combo_node = " ".join(edges[0:2])
+			inv_node = f"{id}: {edges[2]}"
+			graph.add_edge(combo_node, inv_node)
+			
+			for i, edge in enumerate(edges):
+				if edge not in edge_tris:
+					edge_tris[edge] = [id]
+				else:
+					tris = edge_tris[edge]
+					connecting = inv_node if i == 2 else combo_node
+					for tri in tris:
+						i_edges = edges_from_tri(tri)
+						recieving = " ".join(i_edges[0:2]) if edge in tri else f"{tri}: {i_edges[2]}"
+						graph.add_edge(connecting, recieving)
+					edge_tris[edge].append(id)
+
+
+		edge_tris = {edge: tris for edge, tris in edge_tris.items() if len(tris) > 1}
+
+		if not nx.is_bipartite(graph):
+			raise ValueError("Direction graph is not bipartite. Three or more triangles share an edge.")
+
+		coloring = nx.greedy_color(graph)
+
+		tri_dir = {}
+		for tri in self._tris:
+			node = " ".join(edges_from_tri(tri)[0:2])
+
+			tri_dir[tri] = coloring[node]
+
+		print(tri_dir)
+		
+		return tri_dir
+	
+	def coordinate(self):
+		if not self.solved:
+			raise ValueError(f"Figure not solved when coordinating.")
+
+		for id in self._tris:
+			tri = self._get_tri(id)
+			point_ids = id.split(" ")
+			points = tri.coordinate([self[point_id] for point_id in point_ids])
+			for point_id, point in zip(point_ids, points):
+				self._points[point_id] = point
+			
+		print(self._points)
+
+		for id in self._tris:
+			point_ids = id.split(" ")
+			turtle.penup()
+			turtle.goto(self[point_ids[-1]])
+			turtle.write(point_ids[-1])
+			turtle.pendown()
+			for point_id in point_ids:
+				turtle.goto(self[point_id])
+				turtle.write(point_id)
+		
+		turtle.done()

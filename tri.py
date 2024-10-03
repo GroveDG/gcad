@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
-from math import sin, cos, tan, asin, acos, atan, pi as PI, sqrt
+from math import sin, cos, tan, asin, acos, atan2, pi as PI, tau as TAU, sqrt, degrees as to_degrees
 from argparse import ArgumentParser
 from turtle import *
 from util import ff
 from collections import deque
-from typing import List
+from typing import List, Tuple
 
 @dataclass
 class Triangle:
@@ -21,38 +21,47 @@ class Triangle:
             all([angle != None for angle in self.angles])
         )
     
-    def draw(self, start=0, names=["", "", ""]):
-        radians()
-        edges = deque(self.edges.copy())
-        angles = deque(self.angles.copy())
-
-        # if self.ccw:
-        #     sides.reverse()
-        #     angles.reverse()
-
-        edges.rotate(1)
-        angles.rotate(-1)
-
-        seq = deque(zip(edges, angles, names))
-
-        seq.rotate(2*start)
-
-        points = []
-
-        for edge, angle, name in seq:
-            #write(f"{f"{name}=" if name != "" else ""}{ff(angle)}", align="center")
-            points.append(position())
-            forward(edge/2)
-            write(f"{ff(edge)}", align="center")
-            forward(edge/2)
-            ext_angle = PI-angle # Convert interior to exterior angle
-            # if self.ccw: right(ext_angle)
-            left(ext_angle)
-        
-        return points
-
     def __str__(self) -> str:
         return f"Triangle( Angles: {self.angles}   Edges: {self.edges} )"
+    
+    def coordinate(self, points=[Vec2D(0,0),None,None]) -> List[Vec2D]:
+        if not any(points):
+            points[0] = Vec2D(0,0)
+        angles = deque(self.angles)
+        angles.rotate(1)
+
+        start = 0
+        for i, point in enumerate(points):
+            if point != None:
+                start = i
+                break
+
+        seq = deque(zip(angles, self.edges))
+        seq.rotate(-start)
+        seq = list(seq)
+
+        points = deque(points)
+        points.rotate(-start)
+
+        total_angle = 0
+        if points[0] and points[1]:
+            v = points[1] - points[0]
+            total_angle = to_degrees(atan2(v[1], v[0]))
+
+        print(points)
+        for i, (angle, edge) in enumerate(seq[0:2]):
+            point = Vec2D(edge, 0)
+            point = point.rotate(total_angle)
+            total_angle += to_degrees(PI - angle)
+            point += points[i]
+            # if points[i+1] == None:
+            points[i+1] = point
+        print(points)
+        
+        points.rotate(start)
+        points = list(points)
+        
+        return points
 
 def solve_tri(angles: List[float], edges: List[float]):
     # Angle Sum
