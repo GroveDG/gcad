@@ -72,6 +72,9 @@ class Triangle:
         return points
 
 def solve_tri(angles: List[float], edges: List[float]):
+    if sum([angle for angle in angles if angle != None]) > PI:
+        raise ValueError("Sum of angles greater than PI radians.")
+
     # Angle Sum
     if angles.count(None) == 1:
         n = angles.index(None)

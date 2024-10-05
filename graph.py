@@ -125,10 +125,7 @@ class TriGraph():
 		angle_ids = angles_from_tri(id)
 		edge_ids = edges_from_tri(id)
 		
-		try:
-			tri.solve()
-		except ValueError:
-			return
+		tri.solve()
 
 		for angle_id, edge_id, angle, edge in zip(angle_ids, edge_ids, tri.angles, tri.edges):
 			self[angle_id] = angle
@@ -201,12 +198,14 @@ class TriGraph():
 			raise ValueError("Direction graph is not bipartite. Three or more triangles share an edge.")
 
 		coloring = nx.greedy_color(graph)
+		nx.draw_networkx(graph, node_color=list(coloring.values()))
+		pyplot.show()
 
 		tri_dir = {}
 		for tri in self._tris:
 			node = " ".join(edges_from_tri(tri)[0:2])
 
-			tri_dir[tri] = coloring[node]
+			tri_dir[tri] = 0 #coloring[node]
 
 		print(tri_dir)
 		
