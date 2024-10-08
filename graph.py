@@ -155,57 +155,29 @@ class TriGraph():
 
 	# shared edges need to be traversed in opposite orders to prevent overlap
 	def connect(self):
-		edge_tris = {}
+		edge_angles = {}
 		graph = nx.Graph()
 
 		for id in self._tris:
-			edges = edges_from_tri(id)
-
-			# is the edge traversed in regular (alphabetical) order
-			# if two edges are traversed in the same order, they must
-			# turn opposite directions so they don't overlap.
-			# if two edges are traversed in opposite order, they must
-			# turn the same direction so they don't overlap.
-
-			# the use of a combined node allows direction to be determined
-			# using 2-coloring of the resulting bipartite graph
-			# this needs to be done because the last edge is traversed
-			# in the opposite order from the others
-
-			# TODO: Consider using the first point as a vertex and
-			# drawing the other two with respect to that to create an
-			# unordered system
-			combo_node = " ".join(edges[0:2])
-			inv_node = f"{id}: {edges[2]}"
-			graph.add_edge(combo_node, inv_node)
-			
-			for i, edge in enumerate(edges):
-				if edge not in edge_tris:
-					edge_tris[edge] = [id]
-				else:
-					tris = edge_tris[edge]
-					connecting = inv_node if i == 2 else combo_node
-					for tri in tris:
-						i_edges = edges_from_tri(tri)
-						recieving = " ".join(i_edges[0:2]) if edge in tri else f"{tri}: {i_edges[2]}"
-						graph.add_edge(connecting, recieving)
-					edge_tris[edge].append(id)
-
-
-		edge_tris = {edge: tris for edge, tris in edge_tris.items() if len(tris) > 1}
-
-		if not nx.is_bipartite(graph):
-			raise ValueError("Direction graph is not bipartite. Three or more triangles share an edge.")
-
-		coloring = nx.greedy_color(graph)
-		nx.draw_networkx(graph, node_color=list(coloring.values()))
+			for angle in angles_from_tri(id):
+				points = angle.split(" ")
+				edges = [regularize_id(points[0:2]), regularize_id(points[1:3])]
+				for edge in edges:
+					if edge in edge_angles:
+						for other_angle in edge_angles[edge]:
+							if other_angle.split(" ")[1] == points[1]:
+								graph.add_edge(angle, other_angle)
+						edge_angles[edge].append(angle)
+					else:
+						edge_angles[edge] = [angle]
+		
+		nx.draw_networkx(graph)
+		print(list(nx.simple_cycles(graph, length_bound=3)))
 		pyplot.show()
 
 		tri_dir = {}
 		for tri in self._tris:
-			node = " ".join(edges_from_tri(tri)[0:2])
-
-			tri_dir[tri] = 0 #coloring[node]
+			tri_dir[tri] = 0
 
 		print(tri_dir)
 		
