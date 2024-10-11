@@ -5,6 +5,8 @@ from collections import deque
 from functools import lru_cache
 from matplotlib import pyplot
 import turtle
+from math import isclose, sqrt, ceil, tau as TAU
+from util import cyclic_pairwise
 
 def regularize_id(id, angle=False) -> str:
 	if isinstance(id, str):
@@ -136,7 +138,6 @@ class TriGraph():
 	def solved(self):
 		return all([self._get_tri(id).solved for id in self._tris])
 
-
 	def solve(self):
 		iter_diff = True
 		while iter_diff:
@@ -153,34 +154,56 @@ class TriGraph():
 		if not self.solved:
 			raise ValueError(f"Figure not solved.\n{self._angles}\n{self._edges}")
 
-	# shared edges need to be traversed in opposite orders to prevent overlap
 	def connect(self):
-		edge_angles = {}
-		graph = nx.Graph()
+		edge_tris = {}
+		vertex_graphs = {}
+		edge_graph = nx.Graph()
 
 		for id in self._tris:
+			for edge in edges_from_tri(id):
+				if edge in edge_tris:
+					for tri in edge_tris[edge]:
+						edge_graph.add_edge(tri, id, edge=edge)
+					edge_tris[edge].append(id)
+				else:
+					edge_tris[edge] = [id]
+			
 			for angle in angles_from_tri(id):
 				points = angle.split(" ")
-				edges = [regularize_id(points[0:2]), regularize_id(points[1:3])]
-				for edge in edges:
-					if edge in edge_angles:
-						for other_angle in edge_angles[edge]:
-							if other_angle.split(" ")[1] == points[1]:
-								graph.add_edge(angle, other_angle)
-						edge_angles[edge].append(angle)
-					else:
-						edge_angles[edge] = [angle]
-		
-		nx.draw_networkx(graph)
-		print(list(nx.simple_cycles(graph, length_bound=3)))
+				vertex = points[1]
+				ends = [points[0], points[2]]
+				if vertex not in vertex_graphs:
+					vertex_graphs[vertex] = nx.Graph()
+				vertex_graphs[vertex].add_edge(*ends)
+
+		dim_plts = ceil(sqrt(len(vertex_graphs)))
+		fig, axes = pyplot.subplots(nrows=dim_plts, ncols=dim_plts)
+		ax = axes.flatten()
+		for i, (vertex, graph) in enumerate(vertex_graphs.items()):
+			cycles = list(nx.simple_cycles(graph))
+			match len(cycles):
+				case 0:
+					pass
+				case 1:
+					cycle = cycles[0]
+					angles = []
+					for (n1,n2) in cyclic_pairwise(cycle):
+						angles.append(regularize_id((n1, vertex, n2), angle=True))
+					angle_sum = sum(self[angle] for angle in angles)
+					if not isclose(angle_sum, TAU):
+						raise ValueError(f"Overlapping angles: {", ".join(["∠"+angle for angle in angles])}")
+				case 2:
+					angles = set()
+					for cycle in cycles:
+						for (n1,n2) in cyclic_pairwise(cycle):
+							angles.add(regularize_id((n1, vertex, n2), angle=True))
+					raise ValueError(f"Overlapping angles: {cycles}")
+			nx.draw_networkx(graph, ax=ax[i])
+			ax[i].set_axis_off()
+			ax[i].title.set_text(vertex)
 		pyplot.show()
 
-		tri_dir = {}
-		for tri in self._tris:
-			tri_dir[tri] = 0
-
-		print(tri_dir)
-		
+		tri_dir = {tri: 0 for tri in self._tris}
 		self._tris = tri_dir
 	
 	def coordinate(self):

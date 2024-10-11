@@ -56,14 +56,12 @@ class Triangle:
             v = points[1] - points[0]
             total_angle = to_degrees(atan2(v[1], v[0]))
 
-        print(points)
         for i, (angle, edge) in enumerate(seq[0:2]):
             point = Vec2D(edge, 0)
             point = point.rotate(total_angle)
             total_angle += to_degrees(PI - angle)
             point += points[i]
             points[i+1] = point
-        print(points)
         
         points.rotate(start)
         if reverse: points.reverse()
