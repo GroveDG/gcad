@@ -1,16 +1,12 @@
 import argparse
 from pathlib import Path
-from geo import parse_expr, read_file
-from colorama import Fore, Back, Style
+from geo import parse_expr
+from colorama import Fore
 from shutil import get_terminal_size
 from textwrap import wrap
 from itertools import zip_longest
-from solve import solve
-
-def solve_file(filepath):
-	exprs = read_file(filepath)
-	exprs = [parse_expr(expr) for expr in exprs]
-	solve(exprs)
+from solve import solve_file
+from util import read_file
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

@@ -1,11 +1,10 @@
 
 from dataclasses import dataclass
 from typing import List, Set, Self
-from graph import TriGraph, regularize_id
+from fig import Figure
 from pyparsing import Opt, ParseResults, Word, alphas, one_of, DelimitedList, pyparsing_common, Combine
 from pint import UnitRegistry
-from abc import abstractmethod, ABCMeta
-from tri import Triangle
+from abc import abstractmethod
 
 UREG = UnitRegistry()
 
@@ -19,11 +18,11 @@ class BaseExpr():
     symbol = "�"
 
     @abstractmethod
-    def apply(self, graph: TriGraph): pass
+    def apply(self, graph: Figure): pass
 
 class ElementExpr(BaseExpr):
     @abstractmethod
-    def assign(self, graph: TriGraph, value): pass
+    def assign(self, graph: Figure, value): pass
 
 # === Geometry ===
 
@@ -90,10 +89,10 @@ class Angle(ElementExpr):
     def points(self):
         return [self.start, self.vertex, self.end]
     
-    def apply(self, graph: TriGraph):
-        pass
+    def apply(self, graph: Figure):
+        graph._add_tri(self.points)
     
-    def assign(self, graph: TriGraph, value):
+    def assign(self, graph: Figure, value):
         graph[*self.points] = value
 Angle.parser.set_parse_action(Angle)
 
@@ -153,7 +152,7 @@ class Distance(ElementExpr):
     def points(self):
         return [self.start, self.end]
         
-    def assign(self, graph: TriGraph, value):
+    def assign(self, graph: Figure, value):
         graph[*self.points] = value
 Distance.parser.add_parse_action(Distance)
 
@@ -170,7 +169,7 @@ class Equality(BaseExpr):
         for expr in res.exprs:
             self.exprs.append(expr[0])
     
-    def apply(self, graph: TriGraph):
+    def apply(self, graph: Figure):
         exprs = list(self.exprs)
         for expr in exprs:
             if isinstance(expr, ElementExpr):
@@ -195,10 +194,9 @@ EXPRESSIONS: List[BaseExpr] = [
 
 # ========== PARSING ========== #
 
-from pathlib import Path
 from typing import List
 from geo import EXPRESSIONS
-from colorama import Back, Fore, Style
+from colorama import Fore, Style
 
 class ParseException(Exception):
     def __init__(self, expr: str) -> None:
@@ -206,12 +204,6 @@ class ParseException(Exception):
         super().__init__(
             f"Unparsed expression: {expr}"
         )
-
-def read_file(filepath: Path) -> List[str]:
-    with open(filepath) as file:
-        doc = file.read()
-    doc = doc.replace("\n", ",")
-    return doc.split(",")
 
 def parse_expr(expr: str, verbose=False):
     def diagnostic_str():

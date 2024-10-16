@@ -1,3 +1,6 @@
+from pathlib import Path
+from typing import List
+
 def ff(n):
     return f"{n:.3f}".rstrip('0').rstrip('.')
 
@@ -11,3 +14,9 @@ def cyclic_pairwise(iterable):
         a = b
     
     yield a, first
+
+def read_file(filepath: Path) -> List[str]:
+    with open(filepath) as file:
+        doc = file.read()
+    doc = doc.replace("\n", ",")
+    return doc.split(",")
