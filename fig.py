@@ -143,7 +143,8 @@ class Figure():
 					self._solve_tri(tri)
 					successes += 1
 				except AssertionError as e:
-					e.add_note(f"Triangle: {" ".join(tri)}")
+					tri_name = " ".join(tri)
+					e.add_note(f"Triangle: {tri_name}")
 					errs.append(e)
 
 			if successes == 0:
@@ -206,13 +207,16 @@ class Figure():
 			if rev[0]: prev_dir = fmod(prev_dir + PI, TAU)
 
 			if end in pos:
-				s = pos[start].simplified.cartesian
+				v = pos[vertex].simplified.cartesian
 				e = pos[end].simplified.cartesian
-				next_dir = fmod(angle_btw_cartesian(s, e), TAU)
+				next_dir = fmod(angle_btw_cartesian(v, e), TAU)
 				if rev[1]: next_dir = fmod(next_dir + PI, TAU)
 				print(edge_dirs)
-				print(s, e, next_dir, prev_dir, self[start, vertex, end])
-				assert isclose(fmod(next_dir - prev_dir, TAU), self[start, vertex, end])
+				print(pos)
+				diff = next_dir - prev_dir
+				diff = fmod(diff + PI, TAU) - PI
+				print(v, e, next_dir, prev_dir, self[start, vertex, end], prev_edge, next_edge, diff)
+				assert isclose(diff, (self[start, vertex, end]))
 				edge_dirs[next_edge] = next_dir
 			else:
 				next_dir = prev_dir + self[start, vertex, end]
