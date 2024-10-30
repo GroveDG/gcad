@@ -11,7 +11,7 @@ should support all current metric prefixes for the meter.
 Examples:
 |A B| = 5km 4hm 2dam 1m 5dm 7cm 3mm
 
-The metric prefix μ can be alternately written as u.
+The metric prefix abbreviation μ can be alternately written as u.
 |B C| = 100μm
 |C D| = 100um
 
@@ -52,19 +52,19 @@ However, points can be named anything that is soley alphabetical.
 Lines
 -----------------
 Line segments, rays, and lines are all defined in the same way.
-They are a pair of points (separated by spaces) encapsulated by
-one of two line endings:
+They are a pair of points (separated by spaces) encapsulated on
+either side by one of two line endings:
 
 -> for infinite line endings
 - for finite line endings
-
-Any lines defined on their own (and not in a relation) are drawn
-all others are used only for solving.
 
 Examples:
 -A B- for a line segment
 -A B-> for a ray
 <-A B-> for a line
+
+Any lines defined on their own (and not in a relation) are drawn
+all others are used only for solving.
 
 
 Angles
@@ -73,27 +73,6 @@ Angles
 
 Examples:
 <A B C or ∠A B C
-
-
-Triangles
------------------
-Angles implicitly define the triangle they are a part of. This triangle
-is not draw by default, but can have implications for other elements.
-
-Since angles in GCAD have no direction (they are neither CW or CCW),
-Triangles with a shared edge have two ambiguous states: overlapping
-or neighboring.
-
-To disambiguate, GCAD borrows notation from origami and other papercraft.
-
--- denotes a mountain fold, here interpreted as overlapping.
--. denotes a valley fold, here inerpreted as neighboring.
-
-Triangles are assumed by default to be neighboring unless specified.
-
-Examples:
---A B--
--.A B-.
 
 
 
@@ -117,8 +96,8 @@ Lines are specified to be parallel when separated by || or ∥ with
 optional spaces on either side of the operator.
 
 Examples:
-<-A B->||<-C D->
 <-A B-> ∥ <-C D->
+<-A B->||<-C D->
 
 
 Perpendicular
@@ -127,23 +106,23 @@ Lines are specified to be perpendicular when separated by _|_ or ⊥
 with optional spaces on either side of the operator.
 
 Examples:
-<-A B->_|_<-C D->
 <-A B-> ⊥ <-C D->
+<-A B->_|_<-C D->
 
 
 Equality/Congruency
 -----------------
-Two elements of the same type are declared equal in measure by =
+Two elements of the same type are declared congruent by =
 with optional spaces on either side of the operator.
 
 Examples:
-|A B|=|B C|
 ∠A B C = ∠B C A
+|A B|=|B C|
 
 This measure can be defined using a numerical value.
 
 Examples:
-|A B|=70
+|A B| = 70
 
 Congruency and equality statements can be combined into multiple
 equalities. These statements may only contain 1 numerical value.

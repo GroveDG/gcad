@@ -18,11 +18,11 @@ class BaseExpr():
     symbol = "�"
 
     @abstractmethod
-    def apply(self, graph: Figure): pass
+    def apply(self, fig: Figure): pass
 
 class ElementExpr(BaseExpr):
     @abstractmethod
-    def assign(self, graph: Figure, value): pass
+    def assign(self, fig: Figure, value): pass
 
 # === Geometry ===
 
@@ -40,8 +40,8 @@ class Point(BaseExpr):
     def __str__(self) -> str:
         return self.id
 
-    # def apply(self, graph: nx.TriGraph):
-    #     graph.add_node(self.id)f"{
+    # def apply(self, fig: Figure):
+    #     fig[self.id] = None
 Point.parser.set_parse_action(Point)
 
 class Line(ElementExpr):
@@ -63,8 +63,8 @@ class Line(ElementExpr):
         self.start_term = hasattr(res, "start_term")
         self.end_term = hasattr(res, "end_term")
 
-    # def apply(self, graph: nx.TriGraph):
-    #     graph.add_edge(self.start.id, self.end.id)
+    # def apply(self, fig: Figure):
+    #     fig.add_edge(self.start.id, self.end.id)
 Line.parser.set_parse_action(Line)
 
 class Angle(ElementExpr):
@@ -89,11 +89,10 @@ class Angle(ElementExpr):
     def points(self):
         return [self.start, self.vertex, self.end]
     
-    def apply(self, graph: Figure):
-        graph._add_tri(self.points)
+    def apply(self, fig: Figure): pass
     
-    def assign(self, graph: Figure, value):
-        graph[*self.points] = value
+    def assign(self, fig: Figure, value):
+        fig[*self.points] = value
 Angle.parser.set_parse_action(Angle)
 
 class Collinear(BaseExpr):
@@ -152,8 +151,8 @@ class Distance(ElementExpr):
     def points(self):
         return [self.start, self.end]
         
-    def assign(self, graph: Figure, value):
-        graph[*self.points] = value
+    def assign(self, fig: Figure, value):
+        fig[*self.points] = value
 Distance.parser.add_parse_action(Distance)
 
 class Equality(BaseExpr):
@@ -169,16 +168,16 @@ class Equality(BaseExpr):
         for expr in res.exprs:
             self.exprs.append(expr[0])
     
-    def apply(self, graph: Figure):
+    def apply(self, fig: Figure):
         exprs = list(self.exprs)
         for expr in exprs:
             if isinstance(expr, ElementExpr):
-                expr.apply(graph)
+                expr.apply(fig)
             else:
                 quantity = expr
         for expr in exprs:
             if isinstance(expr, ElementExpr):
-                expr.assign(graph, quantity)
+                expr.assign(fig, quantity)
 Equality.parser.add_parse_action(Equality)
 
 EXPRESSIONS: List[BaseExpr] = [
@@ -195,7 +194,7 @@ EXPRESSIONS: List[BaseExpr] = [
 # ========== PARSING ========== #
 
 from typing import List
-from geo import EXPRESSIONS
+from parsing import EXPRESSIONS
 from colorama import Fore, Style
 
 class ParseException(Exception):

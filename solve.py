@@ -1,17 +1,16 @@
-from geo import BaseExpr
+from parsing import BaseExpr
 from typing import List
 from fig import Figure
 import argparse
 from pathlib import Path
 from util import read_file
-from geo import parse_expr
+from parsing import parse_expr
 
 def solve(exprs: List[BaseExpr]):
     figure = Figure()
     for expr in exprs:
         expr.apply(figure)
-    figure._solve_tris()
-    figure._graph()
+    figure._solve()
     print(figure)
 
 def solve_file(filepath):
