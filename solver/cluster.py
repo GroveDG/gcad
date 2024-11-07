@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Self
 import numpy as np
+from points import Points
 
 class ClusterType(Enum):
     Rigid = auto()
@@ -11,7 +12,7 @@ class ClusterType(Enum):
 @dataclass
 class Cluster():
     type: ClusterType
-    points: set = field(default_factory=set)
+    points: Points = field(default_factory=Points)
     dists: dict = field(default_factory=dict)
     angles: dict = field(default_factory=dict)
 
@@ -29,8 +30,7 @@ class Cluster():
 def rule_1(c1: Cluster, c2: Cluster) -> Cluster:
     assert c1.type == ClusterType.Rigid and c2.type == ClusterType.Rigid
 
-    shared_points = c1.points.intersection(c2.points)
-    assert len(shared_points) == 2
+	c1.points.map_to(c2.points)
     
     result = c1 | c2
 
@@ -39,8 +39,7 @@ def rule_1(c1: Cluster, c2: Cluster) -> Cluster:
 def rule_2(c1: Cluster, c2: Cluster) -> Cluster:
     assert c1.type == ClusterType.Radial and c2.type == ClusterType.Radial
 
-    shared_points = c1.points.intersection(c2.points)
-    assert len(shared_points) == 2
+    c1.points.map_to(c2.points, do_scale=True)
     
     result = c1 | c2
 
@@ -49,8 +48,7 @@ def rule_2(c1: Cluster, c2: Cluster) -> Cluster:
 def rule_3(c1: Cluster, c2: Cluster) -> Cluster:
     assert c1.type == ClusterType.Scalable and c2.type == ClusterType.Scalable
 
-    shared_points = c1.points.intersection(c2.points)
-    assert len(shared_points) == 2
+    c1.points.map_to(c2.points, do_scale=True)
     
     result = c1 | c2
 
