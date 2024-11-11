@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Iterable
 
 def ff(n):
     return f"{n:.3f}".rstrip('0').rstrip('.')
@@ -20,3 +20,18 @@ def read_file(filepath: Path) -> List[str]:
         doc = file.read()
     doc = doc.replace("\n", ",")
     return doc.split(",")
+
+def regularize_id(id) -> tuple[str]:
+	if isinstance(id, str):
+		id = id.split(" ")
+	elif not isinstance(id, list) and isinstance(id, Iterable):
+		id = list(id)
+	if hasattr(id[0], "id"):
+		id = [point.id for point in id]
+	if len(id) == 3:
+		vertex = id.pop(1)
+		id.sort()
+		id.insert(1, vertex)
+	else:
+		id.sort()
+	return tuple(id) if len(id) > 1 else id[0]

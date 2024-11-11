@@ -1,6 +1,6 @@
 pyparsing
 colorama
-pint
 matplotlib
 networkx
-numpy
+pint
+geometer

@@ -1,7 +1,7 @@
 
 from dataclasses import dataclass
 from typing import List, Set, Self
-from fig import Figure
+from solver import Figure
 from pyparsing import Opt, ParseResults, Word, alphas, one_of, DelimitedList, pyparsing_common, Combine
 from pint import UnitRegistry
 from abc import abstractmethod
