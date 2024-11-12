@@ -4,3 +4,4 @@ matplotlib
 networkx
 pint
 geometer
+numpy < 2.0

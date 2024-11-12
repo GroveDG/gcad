@@ -35,3 +35,9 @@ def regularize_id(id) -> tuple[str]:
 	else:
 		id.sort()
 	return tuple(id) if len(id) > 1 else id[0]
+
+def get_other(ids, remove):
+	assert len(ids) == 2
+	ids = list(ids)
+	ids.remove(remove)
+	return ids[0]

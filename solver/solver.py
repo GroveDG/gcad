@@ -1,8 +1,11 @@
 import networkx as nx
 from itertools import pairwise
 from matplotlib import pyplot as plt
-from .space import Vector, Rays, Circle
-from util import regularize_id
+from geometer.point import Point, meet
+from geometer.shapes import SegmentCollection, LineCollection, Line
+from geometer.curve import Circle
+from geometer.transformation import rotation
+from util import regularize_id, get_other
 from .fig import Figure
 from .index import Index
 	
@@ -34,8 +37,8 @@ def solve_figure(fig: Figure):
     rem_points.remove(orbiter)
 
     pos = {
-        origin: Vector(0,0),
-        orbiter: Vector(fig[base], 0)
+        origin: Point(0,0),
+        orbiter: Point(fig[base], 0)
     }
     
     def mark_solved(node):
@@ -63,18 +66,19 @@ def solve_figure(fig: Figure):
         measure = fig[con]
         match len(con):
             case 2:
-                center = list(con)
-                center.remove(target)
-                center = center[0]
-                return Circle(pos[center], measure)
+                center = pos[get_other(con, target)]
+                return Circle(center, measure)
             case 3:
-                i = con.index(target)
-                i = 0 if i == 2 else 2
-                return Rays(
-                    pos[con[1]],
-                    (pos[con[i]]-pos[con[1]]).normalize(),
-                    measure
-                    )
+                center = pos[con[1]]
+                base_point = pos[get_other(con[0:3:2], target)]
+                print(center, base_point)
+                p1 = rotation(measure).apply(base_point)
+                p2 = rotation(measure).apply(-base_point)
+                return Line(center, p1)
+                # return LineCollection([
+                #     [center, p1],
+                #     [center, p2]
+                # ])
                     
 
     while len(rem_points) > 0:
@@ -93,14 +97,16 @@ def solve_figure(fig: Figure):
         
         for con in cons:
             for p in con:
-                if p in rem_points: continue
+                if p not in rem_points: continue
                 point = p
                 break
-            if point in pos:
-                pos[point] = con_to_space(con)
+            space = con_to_space(con, point)
+            if point not in pos:
+                pos[point] = space
             else:
-                pos[point] = pos[point].intersect(con_to_space(con))
-            pos[point]
+                print(pos[point])
+                print(space)
+                pos[point] = pos[point].meet(space)
         break
 
 
