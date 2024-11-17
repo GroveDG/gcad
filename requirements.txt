@@ -3,5 +3,5 @@ colorama
 matplotlib
 networkx
 pint
-geometer
 numpy < 2.0
+strictly

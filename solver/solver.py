@@ -1,10 +1,6 @@
 import networkx as nx
 from itertools import pairwise
 from matplotlib import pyplot as plt
-from geometer.point import Point, meet
-from geometer.shapes import SegmentCollection, LineCollection, Line
-from geometer.curve import Circle
-from geometer.transformation import rotation
 from util import regularize_id, get_other
 from .fig import Figure
 from .index import Index
@@ -106,7 +102,7 @@ def solve_figure(fig: Figure):
             else:
                 print(pos[point])
                 print(space)
-                pos[point] = pos[point].meet(space)
+                pos[point] = pos[point].join(space)
         break
 
 
