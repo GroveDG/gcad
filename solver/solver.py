@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from util import regularize_id, get_other
 from .fig import Figure
 from .index import Index
+from .geo import *
 	
 def solve_figure(fig: Figure):
     path_graph = nx.MultiGraph()
@@ -33,8 +34,8 @@ def solve_figure(fig: Figure):
     rem_points.remove(orbiter)
 
     pos = {
-        origin: Point(0,0),
-        orbiter: Point(fig[base], 0)
+        origin: Vec(0,0),
+        orbiter: Vec(fig[base], 0)
     }
     
     def mark_solved(node):
@@ -67,14 +68,11 @@ def solve_figure(fig: Figure):
             case 3:
                 center = pos[con[1]]
                 base_point = pos[get_other(con[0:3:2], target)]
-                print(center, base_point)
-                p1 = rotation(measure).apply(base_point)
-                p2 = rotation(measure).apply(-base_point)
-                return Line(center, p1)
-                # return LineCollection([
-                #     [center, p1],
-                #     [center, p2]
-                # ])
+                base: Vec = (base_point - center).normalized()
+                return [
+                    Ray(center, base.rotate(measure)),
+                    Ray(center, base.rotate(-measure))
+                ]
                     
 
     while len(rem_points) > 0:
@@ -102,7 +100,7 @@ def solve_figure(fig: Figure):
             else:
                 print(pos[point])
                 print(space)
-                pos[point] = pos[point].join(space)
+                pos[point] = meet(pos[point], space)
         break
 
 
