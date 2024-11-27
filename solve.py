@@ -12,7 +12,6 @@ def solve(exprs: List[BaseExpr]):
     for expr in exprs:
         expr.apply(figure)
     solve_figure(figure)
-    print(figure)
 
 def solve_file(filepath):
 	exprs = read_file(filepath)

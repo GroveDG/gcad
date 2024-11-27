@@ -1,7 +1,13 @@
 from dataclasses import dataclass
 from typing import Self
 import numpy as np
-from math import sin, cos
+from math import sin, cos, sqrt
+from itertools import product
+from util import ff
+
+class All():
+    def __repr__(self) -> str:
+        return "Any"
 
 class Vec(np.ndarray):
     def __new__(cls, x, y):
@@ -16,11 +22,12 @@ class Vec(np.ndarray):
     def y(self) -> float:
         return self[1]
     
-    def __abs__(self) -> float:
+    @property
+    def mag(self) -> float:
         return np.linalg.norm(self)
     
     def normalized(self) -> Self:
-        return self / abs(self)
+        return self / self.mag
     
     def polar(angle, r=1) -> Self:
         return r*Vec(cos(angle), sin(angle))
@@ -36,21 +43,38 @@ class Vec(np.ndarray):
     
     def transform(self, matrix) -> Self:
         col = self.reshape(-1, 1)
-        print(col, matrix)
         col = matrix @ col
         return col[:, 0]
+    
+    def __repr__(self) -> str:
+        return f"({ff(self.x)}, {ff(self.y)})"
 
 @dataclass
 class Line():
     o: Vec
     v: Vec
 
-    def join(p0: Vec, p1: Vec) -> Self:
-        return Line(p0, (p1 - p0).normalized())
-
+    @classmethod
+    def join(cls, p0: Vec, p1: Vec) -> Self:
+        return cls(p0, (p1 - p0).normalized())
+    
+    def closest(self, p: Vec) -> Vec:
+        d = (p - self.o).dot(self.v)
+        return self.along(self.clamp(d))
+    
+    def along(self,  d: float) -> Vec:
+        if not self.bound(d): raise ValueError("Distance along Line/Ray out of bounds.")
+        return self.o + self.v*d
+    
+    def bound(self, d: float) -> bool:
+        return True
+    
+    def clamp(self, d: float) -> float:
+        if self.bound(d): return d
+        if d < 0: return self.o
 class Ray(Line):
-    def join(p0: Vec, p1: Vec) -> Self:
-        return Ray(p0, (p1 - p0).normalized())
+    def bound(self, d: float) -> bool:
+        return d >= 0
 
 @dataclass
 class Circle():
@@ -63,23 +87,20 @@ def _key(obj) -> int:
         case Ray(): return 1
         case Line(): return 2
         case Circle(): return 3
+        case ANY: return -1
 
 def dist(obj_1, obj_2) -> float:
     if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
 
     match obj_1, obj_2:
         case Vec(), Vec():
-            return len(obj_1 - obj_2)
-        case Vec(), Line(): # https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Vector_formulation
-            p_o = obj_2.o - obj_1
-            dot = p_o.dot(obj_2.v)
-            if isinstance(obj_2, Line) or dot <= 0:
-                diff = p_o - dot * obj_2.v
-            else:
-                diff = p_o
-            return abs(diff)
+            return (obj_2 - obj_1).mag
+        case Vec(), Line():
+            dist(obj_1, obj_2.closest(obj_1))
         case Vec(), Circle():
-            return abs(obj_1 - obj_2.o)
+            return abs((obj_2.o - obj_1).mag - obj_2.r)
+        case _:
+            raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
         
 def meet(space_1, space_2):
     if not isinstance(space_1, list): space_1 = [space_1]
@@ -87,27 +108,39 @@ def meet(space_1, space_2):
     
     results = []
 
-    for obj_1 in space_1:
-        for obj_2 in space_2:
-            if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
+    for obj_1, obj_2 in product(space_1, space_2):
+        if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
 
-            match obj_1, obj_2:
-                case Line(), Line(): # https://math.stackexchange.com/a/406895  https://en.wikipedia.org/wiki/Cramer's_rule
-                    A = np.column_stack([obj_1.v, -obj_2.v])
-                    det_A = np.linalg.det(A)
-                    if det_A == 0: continue
-                    col_b = (obj_2.o - obj_1.o)
-                    A[:,0] = col_b
-                    det_A0 = np.linalg.det(A)
-                    a = det_A0 / det_A
-                    if isinstance(obj_1, Ray) and a < 0: continue
-                    if isinstance(obj_2, Ray):
-                        A[:,0] = obj_1.v
-                        A[:,1] = col_b
-                        det_A1 = np.linalg.det(A)
-                        b = det_A1 / det_A
-                        if b < 0: continue
-                    results.append(obj_1.o + obj_1.v*a)
+        match obj_1, obj_2:
+            case All(), _:
+                results.append(obj_2)
+            case Line(), Line(): # https://math.stackexchange.com/a/406895
+                a = np.column_stack([obj_1.v, -obj_2.v])
+                b = obj_2.o - obj_1.o
+                try:
+                    x = np.linalg.solve(a, b)
+                except np.linalg.LinAlgError:
+                    continue # Parallel Lines
+                if not obj_1.bound(x[0]): continue
+                if not obj_2.bound(x[1]): continue
+                results.append(obj_1.along(x[0]))
+            case Line(), Circle(): # https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
+                diff = obj_2.o - obj_1.o
+                dot = obj_1.v.dot(diff)
+                delta = dot**2 - (diff.mag**2-obj_2.r**2)
+                if delta < 0: continue
+                elif delta == 0:
+                    if obj_1.bound(-dot):
+                        results.append(obj_1.along(-dot))
+                else:
+                    delta = sqrt(delta)
+                    if obj_1.bound(-dot + delta):
+                        results.append(obj_1.along(-dot + delta))
+                    if obj_1.bound(-dot - delta):
+                        results.append(obj_1.along(-dot - delta))
+            case _:
+                raise NotImplementedError(f"Meeting of {obj_1.__class__.__name__} and {obj_2.__class__.__name__} is not implemented.")
+            
 
     if len(results) == 1: results = results[0]
     

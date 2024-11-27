@@ -6,15 +6,6 @@ class Figure():
 		self._points = {}
 		self._edges = {}
 		self._angles = {}
-	
-	def __str__(self) -> str:
-		return "\n".join(
-			[
-				str(self._points),
-				str(self._edges),
-				str(self._angles)
-			]
-		)
 
 	def __getitem__(self, ids):
 		ids = regularize_id(ids)
