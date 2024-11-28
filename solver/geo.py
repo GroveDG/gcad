@@ -83,11 +83,11 @@ class Circle():
 
 def _key(obj) -> int:
     match obj:
+        case All(): return -1
         case Vec(): return 0
         case Ray(): return 1
         case Line(): return 2
         case Circle(): return 3
-        case ANY: return -1
 
 def dist(obj_1, obj_2) -> float:
     if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1

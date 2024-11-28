@@ -1,5 +1,5 @@
 from typing import Iterable
-from util import regularize_id
+from util import reg_id
 
 class Figure():
 	def __init__(self):
@@ -8,7 +8,7 @@ class Figure():
 		self._angles = {}
 
 	def __getitem__(self, ids):
-		ids = regularize_id(ids)
+		ids = reg_id(ids)
 
 		match len(ids):
 			case 1:
@@ -19,7 +19,7 @@ class Figure():
 				return self._angles[ids]
 	
 	def get(self, ids, default=None):
-		ids = regularize_id(ids)
+		ids = reg_id(ids)
 
 		match len(ids):
 			case 1:
@@ -33,7 +33,7 @@ class Figure():
 					return self._angles.get(ids, default)
 	
 	def __setitem__(self, ids, value):
-		ids = regularize_id(ids)
+		ids = reg_id(ids)
 
 		match len(ids):
 			case 1:

@@ -21,7 +21,7 @@ def read_file(filepath: Path) -> List[str]:
     doc = doc.replace("\n", ",")
     return doc.split(",")
 
-def regularize_id(id) -> tuple[str]:
+def reg_id(id) -> tuple[str]:
 	if isinstance(id, str):
 		id = id.split(" ")
 	elif not isinstance(id, list) and isinstance(id, Iterable):

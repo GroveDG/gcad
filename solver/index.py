@@ -6,6 +6,13 @@ class Index():
         self.edges = {}
         self.angles = {}
 
+    @property
+    def points(self) -> list:
+        return list(
+            self.edges.keys() |
+            self.angles.keys()
+        )
+
     def get_all(self, point: str) -> list:
         edges = self.edges[point]
         angles = self.angles[point]

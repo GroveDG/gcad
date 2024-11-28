@@ -1,34 +1,16 @@
 import networkx as nx
 from matplotlib import pyplot as plt
-from util import regularize_id, get_other
+from util import reg_id, get_other
 from .fig import Figure
 from .index import Index
 from .geo import *
 	
 def solve_figure(fig: Figure):
-    path_graph = nx.MultiGraph()
     index: Index = Index.from_fig(fig)
 
-    # Collect all points to mark as solved when needed.
-    # Points are represented by graph nodes.
-    all_points = set()
-    # Edges are connected to their points.
-    # Edges are represented by graph nodes.
-    for edge in fig._edges.keys():
-        for point in edge:
-            all_points.add(point)
-            path_graph.add_edge(point, edge)
-    # Angles connect their edges.
-    # Angles are represented by graph edges.
-    for angle in fig._angles.keys():
-        edges = (
-            regularize_id(angle[0:2]),
-            regularize_id(angle[1:3])
-            )
-        path_graph.add_edge(*edges)
-    rem_points = list(all_points)
+    rem_points = index.points
 
-    pos = {p: All() for p in all_points}
+    pos = {p: All() for p in rem_points}
     
     # Designate a point as the origin.
     origin = rem_points[0]
@@ -38,29 +20,6 @@ def solve_figure(fig: Figure):
     # Assign the endpoint of the baseline a position.
     orbiter = base[1] if base[0] == origin else base[0]
     pos[orbiter] = Vec(fig[base], 0)
-    
-    # Merge node into "Solved" node for pathfinding and
-    # collecting neighbors.
-    def mark_solved(node):
-        edges = list(path_graph.edges(node))
-        path_graph.remove_edges_from(edges)
-        path_graph.remove_node(node)
-        new_edges = []
-        for edge in edges:
-            if "Solved" in edge: continue
-            edge = list(edge)
-            edge.remove(node)
-            edge.append("Solved")
-            new_edges.append(edge)
-        path_graph.add_edges_from(new_edges)
-        if isinstance(node, str):
-            path_graph.add_edge(node, "Solved")
-            rem_points.remove(node)
-
-    # Mark all starting geometry as solved.
-    mark_solved(origin)
-    mark_solved(base)
-    mark_solved(orbiter)
 
     # Convert a constraint into its possible solutions (possibility space)
     def con_to_space(con: tuple, target):
@@ -76,33 +35,54 @@ def solve_figure(fig: Figure):
                 Ray(center, base.rotate(measure)),
                 Ray(center, base.rotate(-measure))
             ]
-                    
-
-    while len(rem_points) > 0:
+    
+    # Merge node into "Solved" node for pathfinding and
+    # collecting neighbors.
+    def mark_solved(*points):
+        for point in points:
+            rem_points.remove(point)
         # Get all constraints on neighboring points.
         constraints = set()
-        for point in rem_points:
-            for edge in index.edges[point]:
-                if get_other(edge, point) not in rem_points:
-                    constraints.add(edge)
-            for angle in index.angles[point]:
-                points = list(angle)
-                points.remove(point)
-                if all([p not in rem_points for p in points]):
-                    constraints.add(angle)
+        for point in points:
+            for c in index.get_all(point):
+                target = [p for p in c if p in rem_points]
+                if len(target) == 1:
+                    constraints.add((c, target[0]))
         # Apply all collected constraints.
-        for c in constraints:
-            for p in c:
-                if p not in rem_points: continue
-                point = p
-                break
-            space = con_to_space(c, point)
-            pos[point] = meet(pos[point], space)
+        for c, target in constraints:
+            space = con_to_space(c, target)
+            pos[target] = meet(pos[target], space)
+
+    # Mark all starting geometry as solved.
+    mark_solved(origin, orbiter)
+
+    def path_graph() -> nx.MultiDiGraph:
+        graph = nx.MultiDiGraph()
+        for point in rem_points:
+            for angle in index.angles[point]:
+                if not angle[1] == point: continue
+                e1, e2 = angle[1::-1], angle[1:3]
+                print(e1, e2)
+                if reg_id(e1) in index.edges[point]:
+                    graph.add_edge(*e1)
+                if reg_id(e2) in index.edges[point]:
+                    graph.add_edge(*e2)
+        return graph
+    
+    while len(rem_points) > 0:
+        continuums, finites = [], []
+        for point in rem_points:
+            if type(pos[point]) is All: continue
+            if isinstance(pos[point], list) and all([type(p) is Vec for p in pos[point]]):
+                finites.append(point)
+            else:
+                continuums.append(point)
+        print(finites, continuums)
+        graph = path_graph()
+        nx.draw_networkx(graph)
+        plt.show()
         break
 
     print(pos)
-
-    nx.draw_networkx(path_graph)
-    plt.show()
 
     # nx.dijkstra_path(edge_graph, origin, )
