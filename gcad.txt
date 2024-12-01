@@ -33,6 +33,10 @@ Angles
 Angles can be specified in radians (rad), degrees (d, deg, °),
 gradians (grad), or revolutions (rev).
 
+Angles can also have specified direction.
+
+CW, ⭮, ⥁, ⟳, ↻, ↷, or - denotes clockwise.
+CCW, ACW, ⭯, ⥀, ⟲, ↺, ↶ or +  denotes counter-clockwise / anti-clockwise.
 
 
 ===========================

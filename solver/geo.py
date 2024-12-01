@@ -95,20 +95,23 @@ def dist(space_1, space_2) -> float:
     
     results = []
 
-    for obj_1, obj_2 in product(space_1, space_2):
-        if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
-        
-        match obj_1, obj_2:
-            case Vec(), Vec():
-                results.append((obj_2 - obj_1).mag)
-            case Vec(), Line():
-                results.append(dist(obj_1, obj_2.closest(obj_1)))
-            case Vec(), Circle():
-                results.append(abs((obj_2.o - obj_1).mag - obj_2.r))
-            case _:
-                raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
+    for objs in product(space_1, space_2):
+        results.append(_dist_pair(*objs))
         
     return min(results)
+
+def _dist_pair(obj_1, obj_2):
+    if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
+    
+    match obj_1, obj_2:
+        case Vec(), Vec():
+            return (obj_2 - obj_1).mag
+        case Vec(), Line():
+            return dist(obj_1, obj_2.closest(obj_1))
+        case Vec(), Circle():
+            return abs((obj_2.o - obj_1).mag - obj_2.r)
+        case _:
+            raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
 
 def meet(*spaces):
     spaces = list(spaces)
@@ -123,43 +126,66 @@ def _meet_pair(space_1, space_2):
     
     results = []
 
-    for obj_1, obj_2 in product(space_1, space_2):
-        if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
-
-        match obj_1, obj_2:
-            case All(), _:
-                results.append(obj_2)
-            case Line(), Line(): # https://math.stackexchange.com/a/406895
-                a = np.column_stack([obj_1.v, -obj_2.v])
-                b = obj_2.o - obj_1.o
-                try:
-                    x = np.linalg.solve(a, b)
-                except np.linalg.LinAlgError:
-                    continue # Parallel Lines
-                if not obj_1.bound(x[0]): continue
-                if not obj_2.bound(x[1]): continue
-                results.append(obj_1.along(x[0]))
-            case Line(), Circle(): # https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
-                diff = obj_2.o - obj_1.o
-                dot = obj_1.v.dot(diff)
-                delta = dot**2 - (diff.mag**2-obj_2.r**2)
-                if delta < 0: continue
-                elif delta == 0:
-                    if obj_1.bound(-dot):
-                        results.append(obj_1.along(-dot))
-                else:
-                    delta = sqrt(delta)
-                    if obj_1.bound(-dot + delta):
-                        results.append(obj_1.along(-dot + delta))
-                    if obj_1.bound(-dot - delta):
-                        results.append(obj_1.along(-dot - delta))
-            case _:
-                raise NotImplementedError(f"Meeting of {obj_1.__class__.__name__} and {obj_2.__class__.__name__} is not implemented.")
-            
+    for objs in product(space_1, space_2):
+        if result := _intersect(*objs):
+            results.append(result)
 
     if len(results) == 1: results = results[0]
     
     return results
+
+def _intersect(obj_1, obj_2):
+    if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
+
+    match obj_1, obj_2:
+        case All(), _:
+            return obj_2
+        case Line(), Line():
+            return _line_line(obj_1, obj_2)
+        case Line(), Circle():
+            return _line_circle(obj_1, obj_2)
+        case Circle(), Circle():
+            return _circle_circle(obj_1, obj_2)
+        case _:
+            raise NotImplementedError(f"Meeting of {obj_1.__class__.__name__} and {obj_2.__class__.__name__} is not implemented.")
+        
+def _line_line(l1: Line, l2: Line): # https://math.stackexchange.com/a/406895
+    a = np.column_stack([l1.v, -l2.v])
+    b = l2.o - l1.o
+    try:
+        x = np.linalg.solve(a, b)
+    except np.linalg.LinAlgError:
+        return # Parallel Lines
+    if not l1.bound(x[0]): return
+    if not l2.bound(x[1]): return
+    return l1.along(x[0])
+
+def _line_circle(l: Line, c: Circle): # https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
+    diff: Vec = c.o - l.o
+    dot = l.v.dot(diff)
+    delta = dot**2 - (diff.mag**2-c.r**2)
+    if delta < 0: return
+    elif delta == 0:
+        if l.bound(-dot):
+            return l.along(-dot)
+    else:
+        delta = sqrt(delta)
+        if l.bound(-dot + delta):
+            return l.along(-dot + delta)
+        if l.bound(-dot - delta):
+            return l.along(-dot - delta)
+
+def _circle_circle(c1: Circle, c2: Circle): # https://stackoverflow.com/a/3349134
+    d = dist(c1.o, c2.o)
+    if d < c1.r + c2.r: return
+    dir = (c2.o-c1.o)/d
+    a = (c1.r**2 - c2.r**2 + d**2)/(2*d)
+    center = c1.o + a*dir
+    if d == c1.r + c2.r:
+        return center
+    h = sqrt(c1.r**2 - a**2)
+    h_v = h*dir * Vec(1,-1)
+    return center+h_v, center-h_v
 
 def is_finite(space):
     if isinstance(space, Vec): return True

@@ -121,7 +121,6 @@ def solve_figure(fig: Figure):
             mark_solved(prev, pos=path_pos)
 
             assert is_finite(path_pos[next])
-            break
         nx.draw_networkx(graph)
         plt.show()
         break
