@@ -116,12 +116,10 @@ def _dist_pair(obj_1, obj_2):
             raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
 
 def meet(*spaces):
-    print(f"meet: {spaces}")
     spaces = list(spaces)
     result = spaces.pop()
     for space in spaces:
         result = _meet_pair(result, space)
-    print(f"met: {result}")
     return result
 
 def _meet_pair(space_1, space_2):

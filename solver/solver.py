@@ -85,8 +85,6 @@ def solve_figure(fig: Figure):
                 finites.append(point)
             else:
                 continuums.append(point)
-        print(finites, continuums)
-        print(pos)
         
         # Find two connected solvable points
         # Either 2 finites or 1 finite and 1
@@ -108,7 +106,6 @@ def solve_figure(fig: Figure):
             raise ValueError("Figure underconstrained.")
         if path is None:
             raise ValueError("Figure underconstrained.")
-        print(path)
 
         start, end = path[0], path[-1]
         path_pos = pos.copy()
@@ -117,10 +114,9 @@ def solve_figure(fig: Figure):
             d = sorted(d, key=lambda x: x[1])
 
             path_pos[prev] = d[0][0]
-            print(path_pos)
             mark_solved(prev, pos=path_pos)
 
             assert is_finite(path_pos[next])
         pos = path_pos
 
-    print(pos)
+    return pos
