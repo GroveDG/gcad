@@ -9,9 +9,10 @@ from itertools import permutations, pairwise
 def solve_figure(fig: Figure):
     index: Index = Index.from_fig(fig)
 
-    rem_points = index.points
+    pos = {p: All() for p in index.points}
 
-    pos = {p: All() for p in rem_points}
+    def rem_points(pos:dict=pos):
+        return [p for p,v in pos.items() if not isinstance(v, Vec)]
     
     # Select an edge to be the baseline.
     base = list(index.edges)[0]
@@ -37,7 +38,6 @@ def solve_figure(fig: Figure):
                 center = pos[con[1]]
                 base_point = pos[get_other(con[0:3:2], target)]
                 base: Vec = (base_point - center).normalized()
-                print(base, base_point, center)
                 spaces.append([
                     Ray(center, base.rotate(measure)),
                     Ray(center, base.rotate(-measure))
@@ -45,23 +45,21 @@ def solve_figure(fig: Figure):
         return spaces
     
     def mark_solved(*points, pos=pos):
-        for point in points:
-            rem_points.remove(point)
         # Apply all neighboring constraints.
-        constraints = index.one_of(*rem_points) & index.any_of(*points)
+        constraints = index.one_of(*rem_points(pos)) & index.any_of(*points)
         for con in constraints:
             for p in con:
-                if p in rem_points:
+                if not isinstance(pos[p], Vec):
                     target = p
                     break
-            pos[target] = meet(pos[target], *con_to_space(target, con))
+            pos[target] = meet(pos[target], *con_to_space(target, con, pos=pos))
 
     # Mark all starting geometry as solved.
     mark_solved(origin, orbiter)
 
     def path_graph() -> nx.MultiDiGraph:
         graph = nx.MultiDiGraph()
-        for point in rem_points:
+        for point in rem_points(pos):
             for angle in index.p2a[point]:
                 if not angle[1] == point: continue
                 e1, e2 = angle[1::-1], angle[1:]
@@ -71,7 +69,7 @@ def solve_figure(fig: Figure):
                     graph.add_edge(*e2)
         return graph
     
-    while len(rem_points) > 0:
+    while len(rem_points(pos)) > 0:
         graph = path_graph()
 
         # Get all neighbors.
@@ -81,12 +79,14 @@ def solve_figure(fig: Figure):
         # - Finites are finite sets of
         #   possible points.
         continuums, finites = [], []
-        for point in rem_points:
+        for point in rem_points(pos):
             if type(pos[point]) is All: continue
             if is_finite(pos[point]):
                 finites.append(point)
             else:
                 continuums.append(point)
+        print(finites, continuums)
+        print(pos)
         
         # Find two connected solvable points
         # Either 2 finites or 1 finite and 1
@@ -108,7 +108,6 @@ def solve_figure(fig: Figure):
             raise ValueError("Figure underconstrained.")
         if path is None:
             raise ValueError("Figure underconstrained.")
-        print(finites, continuums)
         print(path)
 
         start, end = path[0], path[-1]
@@ -118,11 +117,10 @@ def solve_figure(fig: Figure):
             d = sorted(d, key=lambda x: x[1])
 
             path_pos[prev] = d[0][0]
+            print(path_pos)
             mark_solved(prev, pos=path_pos)
 
             assert is_finite(path_pos[next])
-        nx.draw_networkx(graph)
-        plt.show()
-        break
+        pos = path_pos
 
     print(pos)

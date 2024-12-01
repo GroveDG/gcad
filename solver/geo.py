@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Self
 import numpy as np
-from math import sin, cos, sqrt
+from math import sin, cos, sqrt, isclose
 from itertools import product
 from util import ff
+
+ABS_TOL = 1e-8
 
 class All():
     def __repr__(self) -> str:
@@ -71,7 +73,7 @@ class Line():
     
     def clamp(self, d: float) -> float:
         if self.bound(d): return d
-        if d < 0: return self.o
+        if d < 0: return 0
 class Ray(Line):
     def bound(self, d: float) -> bool:
         return d >= 0
@@ -114,10 +116,12 @@ def _dist_pair(obj_1, obj_2):
             raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
 
 def meet(*spaces):
+    print(f"meet: {spaces}")
     spaces = list(spaces)
     result = spaces.pop()
     for space in spaces:
         result = _meet_pair(result, space)
+    print(f"met: {result}")
     return result
 
 def _meet_pair(space_1, space_2):
@@ -127,8 +131,12 @@ def _meet_pair(space_1, space_2):
     results = []
 
     for objs in product(space_1, space_2):
-        if result := _intersect(*objs):
-            results.append(result)
+        result = _intersect(*objs)
+        if result is not None:
+            if isinstance(result, list):
+                results = [*results, *result]
+            else:
+                results.append(result)
 
     if len(results) == 1: results = results[0]
     
@@ -140,6 +148,10 @@ def _intersect(obj_1, obj_2):
     match obj_1, obj_2:
         case All(), _:
             return obj_2
+        case Vec(), _:
+            d = dist(obj_1, obj_2)
+            if isclose(d, 0, abs_tol=ABS_TOL):
+                return obj_1
         case Line(), Line():
             return _line_line(obj_1, obj_2)
         case Line(), Circle():
@@ -161,34 +173,38 @@ def _line_line(l1: Line, l2: Line): # https://math.stackexchange.com/a/406895
     return l1.along(x[0])
 
 def _line_circle(l: Line, c: Circle): # https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
-    diff: Vec = c.o - l.o
+    diff: Vec = l.o - c.o
     dot = l.v.dot(diff)
     delta = dot**2 - (diff.mag**2-c.r**2)
-    if delta < 0: return
-    elif delta == 0:
-        if l.bound(-dot):
-            return l.along(-dot)
+    if isclose(delta, 0, abs_tol=sqrt(ABS_TOL)):
+        if l.bound(-dot): return l.along(-dot)
+    elif delta < 0: return
     else:
         delta = sqrt(delta)
-        if l.bound(-dot + delta):
-            return l.along(-dot + delta)
-        if l.bound(-dot - delta):
-            return l.along(-dot - delta)
+        bounds = (l.bound(-dot + delta), l.bound(-dot - delta))
+        if all(bounds):
+            return [
+                l.along(-dot + delta),
+                l.along(-dot - delta)
+            ]
+        elif any(bounds):
+            return l.along(-dot + delta) if bounds[0] else l.along(-dot - delta)
 
 def _circle_circle(c1: Circle, c2: Circle): # https://stackoverflow.com/a/3349134
     d = dist(c1.o, c2.o)
-    if d < c1.r + c2.r: return
-    dir = (c2.o-c1.o)/d
+    if d > c1.r + c2.r: return
     a = (c1.r**2 - c2.r**2 + d**2)/(2*d)
+    dir: Vec = (c2.o-c1.o)/d
     center = c1.o + a*dir
     if d == c1.r + c2.r:
         return center
     h = sqrt(c1.r**2 - a**2)
-    h_v = h*dir * Vec(1,-1)
-    return center+h_v, center-h_v
+    h_v = h*Vec(dir.y,-dir.x)
+    return [center+h_v, center-h_v]
 
 def is_finite(space):
     if isinstance(space, Vec): return True
     if isinstance(space, list):
+        if len(space) == 0: raise ValueError("Figure overconstrained.")
         return all([isinstance(p, Vec) for p in space])
     return False
