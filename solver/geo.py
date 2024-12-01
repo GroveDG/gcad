@@ -89,20 +89,35 @@ def _key(obj) -> int:
         case Line(): return 2
         case Circle(): return 3
 
-def dist(obj_1, obj_2) -> float:
-    if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
+def dist(space_1, space_2) -> float:
+    if not isinstance(space_1, list): space_1 = [space_1]
+    if not isinstance(space_2, list): space_2 = [space_2]
+    
+    results = []
 
-    match obj_1, obj_2:
-        case Vec(), Vec():
-            return (obj_2 - obj_1).mag
-        case Vec(), Line():
-            dist(obj_1, obj_2.closest(obj_1))
-        case Vec(), Circle():
-            return abs((obj_2.o - obj_1).mag - obj_2.r)
-        case _:
-            raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
+    for obj_1, obj_2 in product(space_1, space_2):
+        if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
         
-def meet(space_1, space_2):
+        match obj_1, obj_2:
+            case Vec(), Vec():
+                results.append((obj_2 - obj_1).mag)
+            case Vec(), Line():
+                results.append(dist(obj_1, obj_2.closest(obj_1)))
+            case Vec(), Circle():
+                results.append(abs((obj_2.o - obj_1).mag - obj_2.r))
+            case _:
+                raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
+        
+    return min(results)
+
+def meet(*spaces):
+    spaces = list(spaces)
+    result = spaces.pop()
+    for space in spaces:
+        result = _meet_pair(result, space)
+    return result
+
+def _meet_pair(space_1, space_2):
     if not isinstance(space_1, list): space_1 = [space_1]
     if not isinstance(space_2, list): space_2 = [space_2]
     
@@ -145,3 +160,9 @@ def meet(space_1, space_2):
     if len(results) == 1: results = results[0]
     
     return results
+
+def is_finite(space):
+    if isinstance(space, Vec): return True
+    if isinstance(space, list):
+        return all([isinstance(p, Vec) for p in space])
+    return False

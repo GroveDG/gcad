@@ -3,5 +3,4 @@ colorama
 matplotlib
 networkx
 pint
-numpy < 2.0
-strictly
+numpy

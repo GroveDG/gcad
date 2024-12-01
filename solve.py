@@ -6,6 +6,9 @@ from pathlib import Path
 from util import read_file
 from parsing import parse_expr
 from solver import solve_figure
+import numpy as np
+
+np.set_printoptions(precision=3, suppress=True)
 
 def solve(exprs: List[BaseExpr]):
     figure = Figure()

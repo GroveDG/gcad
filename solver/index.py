@@ -3,28 +3,57 @@ from typing import Self
 
 class Index():
     def __init__(self) -> None:
-        self.edges = {}
-        self.angles = {}
+        self.p2e = dict()
+        self.p2a = dict()
+        self.edges = set()
+        self.angles = set()
 
     @property
     def points(self) -> list:
         return list(
-            self.edges.keys() |
-            self.angles.keys()
+            self.p2e.keys() |
+            self.p2a.keys()
         )
-
-    def get_all(self, point: str) -> list:
-        edges = self.edges[point]
-        angles = self.angles[point]
-        return [*edges, *angles]
+    
+    def _get_all(self, *points):
+        return [
+            self.p2a[point] | self.p2e[point]
+            for point in points
+        ]
+    
+    def all_of(self, *points) -> set:
+        values = self._get_all(*points)
+        result = values.pop()
+        for v in values:
+            result &= v
+        return result
+    
+    def any_of(self, *points) -> set:
+        values = self._get_all(*points)
+        result = values.pop()
+        for v in values:
+            result |= v
+        return result
+    
+    def one_of(self, *points) -> set:
+        values = self._get_all(*points)
+        result = values.pop()
+        for v in values:
+            result ^= v
+        return result
     
     def add(self, id: tuple) -> None:
-        index = self.edges if len(id) == 2 else self.angles
+        if len(id) == 2:
+            index = self.p2e
+            self.edges.add(id)
+        else:
+            index = self.p2a
+            self.angles.add(id)
         for point in id:
             if point in index:
-                index[point].append(id)
+                index[point].add(id)
             else:
-                index[point] = [id]
+                index[point] = {id}
     
     def from_fig(fig: Figure) -> Self:
         index = Index()
