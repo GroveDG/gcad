@@ -89,21 +89,24 @@ def solve_figure(fig: Figure):
         # Find two connected solvable points
         # Either 2 finites or 1 finite and 1
         # continuum.
-        if len(finites) >= 2:
-            for a, b in permutations(finites, 2):
-                try:
-                    path = nx.dijkstra_path(graph, a, b)
-                    break
-                except: continue
-        elif len(finites) == 1 and len(continuums) > 0:
-            a = finites[0]
-            for b in continuums:
-                try:
-                    path = nx.dijkstra_path(graph, a, b)
-                    break
-                except: continue
-        else:
-            raise ValueError("Figure underconstrained.")
+        match [len(finites), len(continuums)]:
+        	case [0, 0]:
+        		pass # escape?
+        	case [0, _]:
+        		raise ValueError("Figure underconstrained.")
+        	case [1, _]:
+	            a = finites[0]
+	            for b in continuums:
+	                try:
+	                    path = nx.dijkstra_path(graph, a, b)
+	                    break
+	                except: continue
+	        case [_, _]:
+	            for a, b in permutations(finites, 2):
+	                try:
+	                    path = nx.dijkstra_path(graph, a, b)
+	                    break
+	                except: continue
         if path is None:
             raise ValueError("Figure underconstrained.")
 

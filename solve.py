@@ -7,6 +7,7 @@ from util import read_file
 from parsing import parse_expr
 from solver import solve_figure
 import numpy as np
+from time import time
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -14,7 +15,10 @@ def solve(exprs: List[BaseExpr]):
     figure = Figure()
     for expr in exprs:
         expr.apply(figure)
+    start = time()
     pos = solve_figure(figure)
+    end = time()
+    print(end-start)
     print(pos)
 
 def solve_file(filepath):
