@@ -8,23 +8,38 @@ from parsing import parse_expr
 from solver import solve_figure
 import numpy as np
 from time import time
+import cProfile
+import pstats
 
 np.set_printoptions(precision=3, suppress=True)
 
-def solve(exprs: List[BaseExpr]):
+def solve(exprs: List[BaseExpr], profile=False):
     figure = Figure()
     for expr in exprs:
         expr.apply(figure)
-    start = time()
-    pos = solve_figure(figure)
-    end = time()
-    print(end-start)
-    print(pos)
+    if profile:
+        cProfile.runctx(
+            'solve_figure(figure)',
+            globals=globals(),
+            filename="profile",
+            locals={"figure": figure}
+        )
+        with open("profile.txt", mode='w') as file:
+            stats = pstats.Stats("profile", stream=file)
+            stats = stats.strip_dirs()
+            stats = stats.sort_stats("cumulative")
+            stats.print_stats()
+    else:
+        start = time()
+        pos = solve_figure(figure)
+        end = time()
+        print(end-start)
+        print(pos)
 
-def solve_file(filepath):
+def solve_file(filepath, **kwargs):
 	exprs = read_file(filepath)
 	exprs = [parse_expr(expr) for expr in exprs]
-	solve(exprs)
+	solve(exprs, **kwargs)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,6 +53,12 @@ if __name__ == "__main__":
         type=Path
     )
 
+    parser.add_argument(
+        '-p', '--profile',
+        help="Uses cProfile to profile solver.",
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
-    solve_file(args.filepath)
+    solve_file(**vars(args))
