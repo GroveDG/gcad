@@ -113,7 +113,7 @@ def solve_figure(fig: Figure):
 		start, end = path[0], path[-1]
 		path_pos = pos.copy()
 		for prev, next in pairwise(path):
-			d = [(p, dist(p, path_pos[end])) for p in path_pos[prev]]
+			d = [(p, dist_approx(p, path_pos[end])) for p in path_pos[prev]]
 			d = sorted(d, key=lambda x: x[1])
 
 			path_pos[prev] = d[0][0]

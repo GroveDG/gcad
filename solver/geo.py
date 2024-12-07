@@ -98,6 +98,30 @@ def dist(space_1, space_2) -> float:
     results = []
 
     for objs in product(space_1, space_2):
+        results.append(_dist_pair(*objs))
+        
+    return min(results)
+
+def _dist_pair(obj_1, obj_2):
+    if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
+    
+    match obj_1, obj_2:
+        case Vec(), Vec():
+            return (obj_2 - obj_1).mag
+        case Vec(), Line():
+            return (obj_2.closest(obj_1) - obj_1).mag
+        case Vec(), Circle():
+            return abs((obj_2.o - obj_1).mag - obj_2.r)
+        case _:
+            raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
+
+def dist_approx(space_1, space_2) -> float:
+    if not isinstance(space_1, list): space_1 = [space_1]
+    if not isinstance(space_2, list): space_2 = [space_2]
+    
+    results = []
+
+    for objs in product(space_1, space_2):
         results.append(_dist_pair_approx(*objs))
         
     return min(results)
@@ -109,22 +133,9 @@ def _dist_pair_approx(obj_1, obj_2):
             diff = (obj_2 - obj_1)
             return diff.x + diff.y
         case Vec(), Line():
-            return dist(obj_1, obj_2.closest(obj_1))
+            return _dist_pair_approx(obj_1, obj_2.closest(obj_1))
         case Vec(), Circle():
-            return abs(dist(obj_1, obj_2.o) - obj_2.r)
-        case _:
-            raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
-
-def _dist_pair(obj_1, obj_2):
-    if _key(obj_1) > _key(obj_2): obj_1, obj_2 = obj_2, obj_1
-    
-    match obj_1, obj_2:
-        case Vec(), Vec():
-            return (obj_2 - obj_1).mag
-        case Vec(), Line():
-            return dist(obj_1, obj_2.closest(obj_1))
-        case Vec(), Circle():
-            return abs((obj_2.o - obj_1).mag - obj_2.r)
+            return abs(_dist_pair_approx(obj_1, obj_2.o) - obj_2.r)
         case _:
             raise NotImplementedError(f"Distance from {obj_1.__class__.__name__} to {obj_2.__class__.__name__} is not implemented.")
 
