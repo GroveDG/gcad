@@ -1,28 +1,27 @@
-from parsing import BaseExpr
+from parsing import BaseExpr, parse_expr
 from typing import List
-from solver.fig import Figure
 import argparse
 from pathlib import Path
 from util import read_file
-from parsing import parse_expr
 from solver import solve_figure
 import numpy as np
 from time import time
 import cProfile
 import pstats
+from index import Index
 
 np.set_printoptions(precision=3, suppress=True)
 
 def solve(exprs: List[BaseExpr], profile=False):
-    figure = Figure()
+    ind = Index()
     for expr in exprs:
-        expr.apply(figure)
+        expr.apply(ind)
     if profile:
         cProfile.runctx(
-            'solve_figure(figure)',
+            'solve_figure(ind)',
             globals=globals(),
             filename="profile",
-            locals={"figure": figure}
+            locals={"ind": ind}
         )
         with open("profile.txt", mode='w') as file:
             stats = pstats.Stats("profile", stream=file)
@@ -31,7 +30,7 @@ def solve(exprs: List[BaseExpr], profile=False):
             stats.print_stats()
     else:
         start = time()
-        pos = solve_figure(figure)
+        pos = solve_figure(ind)
         end = time()
         print(end-start)
         print(pos)

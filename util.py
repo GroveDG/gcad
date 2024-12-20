@@ -4,6 +4,15 @@ from typing import List, Iterable
 def ff(n):
     return f"{n:.3f}".rstrip('0').rstrip('.')
 
+def discard(l: list, value):
+    try:
+        l.remove(value)
+    except:
+        pass
+
+def ff(n):
+    return f"{n:.3f}".rstrip('0').rstrip('.')
+
 def cyclic_pairwise(iterable):
     iterator = iter(iterable)
     first = next(iterator, None)
@@ -14,12 +23,6 @@ def cyclic_pairwise(iterable):
         a = b
     
     yield a, first
-
-def read_file(filepath: Path) -> List[str]:
-    with open(filepath) as file:
-        doc = file.read()
-    doc = doc.replace("\n", ",")
-    return doc.split(",")
 
 def reg_id(id) -> tuple[str]:
 	if isinstance(id, str):
@@ -41,3 +44,9 @@ def get_other(ids, remove):
 	ids = list(ids)
 	ids.remove(remove)
 	return ids[0]
+
+def read_file(filepath: Path) -> List[str]:
+    with open(filepath) as file:
+        doc = file.read()
+    doc = doc.replace("\n", ",")
+    return doc.split(",")

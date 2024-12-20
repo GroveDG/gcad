@@ -1,10 +1,11 @@
 
-from dataclasses import dataclass
-from typing import List, Set, Self
-from solver import Figure
+from typing import List, Set, Self, Tuple
 from pyparsing import Opt, ParseResults, Word, alphas, one_of, DelimitedList, pyparsing_common, Combine
 from pint import UnitRegistry
 from abc import abstractmethod
+from index import Index
+import geo
+from util import *
 
 UREG = UnitRegistry()
 
@@ -17,12 +18,22 @@ class BaseExpr():
     parser = None
     symbol = "�"
 
-    @abstractmethod
-    def apply(self, fig: Figure): pass
+    def __init__(self):
+        self.points: Tuple[str] = tuple()
 
-class ElementExpr(BaseExpr):
     @abstractmethod
-    def assign(self, fig: Figure, value): pass
+    def apply(self, ind: Index): pass
+
+class Assignable(BaseExpr):
+    def assign(self, value):
+        self.measure = value
+
+class Constraint(BaseExpr):
+    def apply(self, ind: Index):
+        ind.add_constraint(self)
+
+    @abstractmethod
+    def to_geo(self, pos, target): pass
 
 # === Geometry ===
 
@@ -35,103 +46,14 @@ class Point(BaseExpr):
     id: str
 
     def __init__(self, res: ParseResults) -> None:
+        super().__init__()
         self.id = res[0]
     
     def __str__(self) -> str:
         return self.id
-
-    # def apply(self, fig: Figure):
-    #     fig[self.id] = None
 Point.parser.set_parse_action(Point)
 
-class Line(ElementExpr):
-    parser = (
-        Opt("<")("start_term") + "-" +
-        Point.parser("start") + Point.parser("end") +
-        "-" + Opt(">")("end_term")
-    )
-    symbol = "⟷"
-
-    start: Point
-    end: Point
-    start_term: bool
-    end_term: bool
-
-    def __init__(self, res: ParseResults) -> None:
-        self.start = res.start
-        self.end = res.end
-        self.start_term = hasattr(res, "start_term")
-        self.end_term = hasattr(res, "end_term")
-
-    # def apply(self, fig: Figure):
-    #     fig.add_edge(self.start.id, self.end.id)
-Line.parser.set_parse_action(Line)
-
-class Angle(ElementExpr):
-    parser = (
-        one_of(["<", "∠"]) +
-        Point.parser("start") + 
-        Point.parser("vertex") + 
-        Point.parser("end")
-    )
-    symbol = "∠"
-    
-    start: Point
-    vertex: Point
-    end: Point
-
-    def __init__(self, res: ParseResults) -> None:
-        self.start = res.start
-        self.vertex = res.vertex
-        self.end = res.end
-    
-    @property
-    def points(self):
-        return [self.start, self.vertex, self.end]
-    
-    def apply(self, fig: Figure): pass
-    
-    def assign(self, fig: Figure, value):
-        fig[*self.points] = value
-Angle.parser.set_parse_action(Angle)
-
-class Collinear(BaseExpr):
-    parser = DelimitedList(
-        Point.parser("points*"), "-", min=3
-    )
-    symbol = "⋮"
-
-    points: Set[Point]
-
-    def __init__(self, res: ParseResults) -> None:
-        self.points = res.points
-Collinear.parser.set_parse_action(Collinear)
-
-class Parallel(BaseExpr):
-    parser = DelimitedList(
-        Line.parser("lines*"), one_of("||", "∥"), min=2
-    )
-    symbol = "∥"
-
-    lines: Set[Line]
-
-    def __init__(self, res: ParseResults) -> None:
-        self.lines = res.lines
-Parallel.parser.add_parse_action(Parallel)
-
-class Perpendicular(BaseExpr):
-    parser = DelimitedList(
-        Line.parser("lines*"), one_of("_|_", "⊥"), min=2
-    )
-    symbol = "⊥"
-
-    lines: List[Line]
-
-    def __init__(self, res: ParseResults) -> None:
-        self.lines = res.lines
-Perpendicular.parser.add_parse_action(Perpendicular)
-
-class Distance(ElementExpr):
+class Distance(Assignable, Constraint):
     parser = (
         "|" +
         Point.parser("start") +
@@ -140,20 +62,108 @@ class Distance(ElementExpr):
     )
     symbol = "|"
 
-    start: Point
-    end: Point
+    def __init__(self, res: ParseResults) -> None:
+        super().__init__()
+        self.points = (res.start.id, res.end.id)
+
+    @property
+    def start(self): return self.points[0]
+    @property
+    def end(self): return self.points[1]
+        
+    def to_geo(self, pos, target):
+        base_point = self.end if self.start == target else self.start
+        center = pos[base_point]
+        return geo.Circle(center, self.measure)
+Distance.parser.add_parse_action(Distance)
+
+class Angle(Assignable, Constraint):
+    parser = (
+        one_of(["<", "∠"]) +
+        Point.parser("start") + 
+        Point.parser("vertex") + 
+        Point.parser("end")
+    )
+    symbol = "∠"
 
     def __init__(self, res: ParseResults) -> None:
-        self.start = res.start
-        self.end = res.end
-    
+        super().__init__()
+        self.points = (res.start.id, res.vertex.id, res.end.id)
+
     @property
-    def points(self):
-        return [self.start, self.end]
-        
-    def assign(self, fig: Figure, value):
-        fig[*self.points] = value
-Distance.parser.add_parse_action(Distance)
+    def start(self): return self.points[0]
+    @property
+    def vertex(self): return self.points[1]
+    @property
+    def end(self): return self.points[2]
+
+    def to_geo(self, pos, target):
+        if target == self.vertex:
+            raise ValueError("Angle cannot constrain vertex.")
+        center = pos[self.vertex]
+        base_point = self.end if self.start == target else self.start
+        base_pos = pos[base_point]
+        base: geo.Vec = (base_pos - center).normalized()
+        return [
+            geo.Ray(center, base.rotate(self.measure)),
+            geo.Ray(center, base.rotate(-self.measure))
+        ]
+Angle.parser.set_parse_action(Angle)
+
+# class Line(BaseExpr):
+#     parser = (
+#         Opt("<")("start_term") + "-" +
+#         Point.parser("start") + Point.parser("end") +
+#         "-" + Opt(">")("end_term")
+#     )
+#     symbol = "⟷"
+
+#     points: Tuple[Point]
+#     terms: Tuple[bool]
+
+#     def __init__(self, res: ParseResults) -> None:
+#         self.points = (res.start, res.end)
+#         self.terms = (
+#             hasattr(res, "start_term"),
+#             hasattr(res, "end_term")
+#         )
+# Line.parser.set_parse_action(Line)
+
+# class Collinear(BaseExpr):
+#     parser = DelimitedList(
+#         Point.parser("points*"), "-", min=3
+#     )
+#     symbol = "⋮"
+
+#     points: Set[Point]
+
+#     def __init__(self, res: ParseResults) -> None:
+#         self.points = res.points
+# Collinear.parser.set_parse_action(Collinear)
+
+# class Parallel(BaseExpr):
+#     parser = DelimitedList(
+#         Line.parser("lines*"), one_of("||", "∥"), min=2
+#     )
+#     symbol = "∥"
+
+#     lines: Set[Line]
+
+#     def __init__(self, res: ParseResults) -> None:
+#         self.lines = res.lines
+# Parallel.parser.add_parse_action(Parallel)
+
+# class Perpendicular(BaseExpr):
+#     parser = DelimitedList(
+#         Line.parser("lines*"), one_of("_|_", "⊥"), min=2
+#     )
+#     symbol = "⊥"
+
+#     lines: List[Line]
+
+#     def __init__(self, res: ParseResults) -> None:
+#         self.lines = res.lines
+# Perpendicular.parser.add_parse_action(Perpendicular)
 
 class Equality(BaseExpr):
     parser = DelimitedList(
@@ -168,25 +178,25 @@ class Equality(BaseExpr):
         for expr in res.exprs:
             self.exprs.append(expr[0])
     
-    def apply(self, fig: Figure):
+    def apply(self, ind: Index):
         exprs = list(self.exprs)
+        quantity = [expr for expr in exprs if not isinstance(expr, Assignable)]
+        assert len(quantity) <= 1, "Assignents must only have one quantity."
+        quantity = quantity[0]
         for expr in exprs:
-            if isinstance(expr, ElementExpr):
-                expr.apply(fig)
-            else:
-                quantity = expr
-        for expr in exprs:
-            if isinstance(expr, ElementExpr):
-                expr.assign(fig, quantity)
+            if isinstance(expr, Assignable):
+                expr.assign(quantity)
+            if isinstance(expr, Constraint):
+                expr.apply(ind)
 Equality.parser.add_parse_action(Equality)
 
 EXPRESSIONS: List[BaseExpr] = [
     Point,
-    Line,
+    # Line,
     Angle,
-    Collinear,
-    Parallel,
-    Perpendicular,
+    # Collinear,
+    # Parallel,
+    # Perpendicular,
     Distance,
     Equality
 ]
@@ -194,7 +204,6 @@ EXPRESSIONS: List[BaseExpr] = [
 # ========== PARSING ========== #
 
 from typing import List
-from parsing import EXPRESSIONS
 from colorama import Fore, Style
 
 class ParseException(Exception):
