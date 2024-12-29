@@ -12,16 +12,16 @@ from index import Index
 
 np.set_printoptions(precision=3, suppress=True)
 
-def solve(exprs: List[BaseExpr], profile=False):
+def solve(exprs: List[BaseExpr], profile=False, **kwargs):
     ind = Index()
     for expr in exprs:
         expr.apply(ind)
     if profile:
         cProfile.runctx(
-            'solve_figure(ind)',
+            'solve_figure(ind, **kwargs)',
             globals=globals(),
             filename="profile",
-            locals={"ind": ind}
+            locals={"ind": ind, "kwargs": kwargs}
         )
         with open("profile.txt", mode='w') as file:
             stats = pstats.Stats("profile", stream=file)
@@ -30,7 +30,7 @@ def solve(exprs: List[BaseExpr], profile=False):
             stats.print_stats()
     else:
         start = time()
-        pos = solve_figure(ind)
+        pos = solve_figure(ind, **kwargs)
         end = time()
         print(end-start)
         print(pos)
@@ -56,6 +56,12 @@ if __name__ == "__main__":
         '-p', '--profile',
         help="Uses cProfile to profile solver.",
         action="store_true"
+    )
+
+    parser.add_argument(
+        '-r', '--root',
+        help="Sets the root of the figure.",
+        type=str
     )
 
     args = parser.parse_args()

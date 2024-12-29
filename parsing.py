@@ -77,7 +77,7 @@ class Distance(Assignable, Constraint):
         return geo.Circle(center, self.measure)
     
     def __str__(self):
-        return f"|{' '.join(self.points)}| = {self.measure}"
+        return f"|{' '.join(self.points)}| = {ff(self.measure)}"
     def __repr__(self):
         return self.__str__()
 Distance.parser.add_parse_action(Distance)
@@ -115,7 +115,7 @@ class Angle(Assignable, Constraint):
         ]
     
     def __str__(self):
-        return f"∠{' '.join(self.points)} = {self.measure}"
+        return f"∠{' '.join(self.points)} = {ff(self.measure)}"
     def __repr__(self):
         return self.__str__()
 Angle.parser.set_parse_action(Angle)
