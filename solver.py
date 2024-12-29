@@ -3,8 +3,11 @@ from matplotlib import pyplot as plt
 from util import reg_id, discard, get_other
 from index import Index
 from geo import *
-from itertools import permutations, pairwise, combinations
+from itertools import permutations, pairwise, chain
+from collections import namedtuple
 import parsing
+
+ConGraphs = namedtuple('ConGraphs', ['origin', 'orbiter', 'foreward', 'backward', 'checks'])
 
 def solve_figure(ind: Index):
 	pos = {p: All() for p in ind.points}
@@ -16,36 +19,10 @@ def solve_figure(ind: Index):
 	pos[origin] = Vec(0,0)
 	pos[orbiter] = Vec(base.measure, 0)
 
-	graph = nx.Graph()
-	for c in ind._constraints:
-		for edge in combinations(c.points, 2):
-			graph.add_edge(*edge)
-	
-	nx.draw_networkx(graph)
-	plt.show()
+	con_graph = create_con_graph(ind, origin, orbiter)
+	display_con_graph(con_graph)
 
 	print(f"origin: {origin}, orbiter: {orbiter}")
-	quit()
-
-	g = path_graph()
-	cycles = []
-	starts = [
-		list(g.successors(origin)),
-		list(g.successors(orbiter))
-	]
-	ends = [
-		list(g.predecessors(origin)),
-		list(g.predecessors(orbiter))
-	]
-	discard(starts[0], orbiter)
-	discard(starts[1], origin)
-	discard(ends[0], orbiter)
-	discard(ends[1], origin)
-	
-	print(starts, ends)
-	nx.draw_networkx(g)
-	plt.show()
-
 	quit()
 	
 	while len(rem_points(pos)) > 0:
@@ -102,3 +79,75 @@ def solve_figure(ind: Index):
 		pos = path_pos
 
 	return pos
+
+def create_con_graph(ind: Index, origin: str, orbiter: str):
+	def start_graph(*points):
+		"""First point is used as starting point."""
+		graph = nx.DiGraph()
+		able_constraints = {}
+		def graph_point(fixed_points: set, point: str, able_constraints: dict):
+			next_points = set()
+			for c in ind.get_constraints(point):
+				loose_points = set(c.points).difference(fixed_points)
+				if len(loose_points) != 1: continue
+				(loose_point,) = loose_points
+				if loose_point not in able_constraints:
+					able_constraints[loose_point] = [c]
+				else:
+					able_constraints[loose_point].append(c)
+					# Replace with rigorous finite check
+					# maybe use DOF analysis?
+					if len(able_constraints[loose_point]) == 2:
+						next_points.add(loose_point)
+
+			for p in next_points:
+				fixed_points.add(loose_point)
+				graph.add_edge(point, p)
+				graph_point(fixed_points, p, able_constraints)
+
+			return fixed_points, able_constraints
+		graph_point(set(points), points[0], able_constraints)
+		return graph, able_constraints
+
+	def get_unused_constraints(existing_constraints: set, able_constraints: dict):
+		used_constraints = [cs for cs in able_constraints.values() if len(cs) >= 2]
+		used_constraints = set(chain.from_iterable(used_constraints))
+		return existing_constraints.difference(used_constraints)
+
+	checks = set(ind._constraints)
+	foreward, able_constraints = start_graph(origin, orbiter)
+	print(able_constraints)
+	checks = get_unused_constraints(checks, able_constraints)
+	backward, able_constraints = start_graph(orbiter, origin)
+	print(able_constraints)
+	checks = get_unused_constraints(checks, able_constraints)
+	print(checks)
+
+	return ConGraphs(
+		origin,
+		orbiter,
+		foreward,
+		backward,
+		checks
+	)
+
+def display_con_graph(con_graph: ConGraphs):
+	graph = nx.MultiGraph()
+	edge_colors = []
+
+	for (u, v) in con_graph.foreward.edges:
+		graph.add_edge(u, v)
+		edge_colors.append("green")
+	for (u, v) in con_graph.backward.edges:
+		graph.add_edge(u, v)
+		edge_colors.append("blue")
+
+	for check in con_graph.checks:
+		graph.add_edge(check.points[0], check.points[1])
+		edge_colors.append("red")
+
+	# nx.draw_networkx(graph, edge_color=edge_colors)
+	print(list(con_graph.foreward.edges))
+	print(list(con_graph.backward.edges))
+	print(con_graph.checks)
+	plt.show()

@@ -75,6 +75,11 @@ class Distance(Assignable, Constraint):
         base_point = self.end if self.start == target else self.start
         center = pos[base_point]
         return geo.Circle(center, self.measure)
+    
+    def __str__(self):
+        return f"|{' '.join(self.points)}| = {self.measure}"
+    def __repr__(self):
+        return self.__str__()
 Distance.parser.add_parse_action(Distance)
 
 class Angle(Assignable, Constraint):
@@ -108,6 +113,11 @@ class Angle(Assignable, Constraint):
             geo.Ray(center, base.rotate(self.measure)),
             geo.Ray(center, base.rotate(-self.measure))
         ]
+    
+    def __str__(self):
+        return f"∠{' '.join(self.points)} = {self.measure}"
+    def __repr__(self):
+        return self.__str__()
 Angle.parser.set_parse_action(Angle)
 
 # class Line(BaseExpr):
