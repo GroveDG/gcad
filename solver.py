@@ -16,15 +16,19 @@ def solve_figure(ind: Index, root = None):
 
 	graph = nx.DiGraph()
 
+	# TODO: Figure out best pathing through tree.
+	# - Build as many fixed points as possible.
+	# - Use as many constraints to fix a point as possible.
 	# https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
 	queue = deque()
 	fixed = set([root])
 	queue.append(root)
 	able_cs = {}
-
+	
 	while len(queue) > 0:
 		while len(queue) > 0:
 			p = queue.pop()
+			to_queue = set()
 			for c in ind.get_constraints(p):
 				# Assumption:
 				#  A constraint must have all points
@@ -34,6 +38,8 @@ def solve_figure(ind: Index, root = None):
 				loose = set(c.points).difference(fixed)
 				if len(loose) != 1: continue
 				(loose,) = loose
+
+				print(p, loose, c)
 
 				if loose not in able_cs:
 					able_cs[loose] = [c]
@@ -47,8 +53,10 @@ def solve_figure(ind: Index, root = None):
 							p, loose,
 							cs = able_cs[loose]
 						)
-						queue.append(loose)
-						fixed.add(loose)
+						to_queue.add(loose)
+			for q in to_queue:
+				queue.append(q)
+				fixed.add(q)
 		# Fix a point arbitrarily if there are remaining points
 		# that are still not finitely constrained.
 		# TODO: Support isolated sub-figures. 
@@ -96,7 +104,10 @@ def display(con_graph: nx.DiGraph, checks: list):
 		edge_labels[(u,v)] = "\n".join([str(c) for c in cs])
 
 	for check in checks:
+		# TODO: Accurately represent checks with
+		# more than 2 points.
 		u, v = check.points[0], check.points[1]
+		if graph.has_edge(u, v): continue
 		graph.add_edge(
 			u, v,
 			color = "red"
