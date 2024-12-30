@@ -1,18 +1,16 @@
 import networkx as nx
 from matplotlib import pyplot as plt
-from util import reg_id, discard, get_other
+from util import *
 from index import Index
 from geo import *
 from itertools import permutations, pairwise, chain
 from collections import namedtuple, deque
 import parsing
 
-ConGraphs = namedtuple('ConGraphs', ['origin', 'orbiter', 'foreward', 'backward', 'checks'])
+ARBITRARY = "Arbitrary"
 
 def solve_figure(ind: Index, root = None):
 	if root == None: root = ind.points[0]
-
-	pos = {p: All() for p in ind.points}
 
 	graph = nx.DiGraph()
 
@@ -23,7 +21,9 @@ def solve_figure(ind: Index, root = None):
 	queue = deque()
 	fixed = set([root])
 	queue.append(root)
-	able_cs = {}
+	support = {p: [] for p in ind.points}
+	support[root].append(ARBITRARY)
+	path = [root]
 	
 	while len(queue) > 0:
 		while len(queue) > 0:
@@ -37,24 +37,21 @@ def solve_figure(ind: Index, root = None):
 				# required points.
 				loose = set(c.points).difference(fixed)
 				if len(loose) != 1: continue
-				(loose,) = loose
+				loose, = loose
 
-				print(p, loose, c)
+				support[loose].append(c)
 
-				if loose not in able_cs:
-					able_cs[loose] = [c]
-				else:
-					able_cs[loose].append(c)
-					# Assumption:
-					#  2 constraints are always finite.
-					# TODO: Rigorously determine finiteness
-					if len(able_cs[loose]) == 2:
-						graph.add_edge(
-							p, loose,
-							cs = able_cs[loose]
-						)
-						to_queue.add(loose)
+				# Assumption:
+				#  2 constraints are always finite.
+				# TODO: Rigorously determine finiteness
+				if len(support[loose]) == 2:
+					graph.add_edge(
+						p, loose,
+						cs = support[loose]
+					)
+					to_queue.add(loose)
 			for q in to_queue:
+				path.append(q)
 				queue.append(q)
 				fixed.add(q)
 		# Fix a point arbitrarily if there are remaining points
@@ -62,68 +59,102 @@ def solve_figure(ind: Index, root = None):
 		# TODO: Support isolated sub-figures. 
 		# (Arbitrary selection on unconstrained points)
 		# TODO: Design optimal selection method.
-		continuums = set(able_cs.keys()).difference(fixed)
+		continuums = set(support.keys()).difference(fixed)
 		if len(continuums) > 0:
 			rnd_point = continuums.pop()
-			able_cs[rnd_point].append("Arbitrary")
+			support[rnd_point].append(ARBITRARY)
 			graph.add_edge(
 				p, rnd_point,
-				cs = able_cs[rnd_point],
+				cs = support[rnd_point],
 				arbitrary=True
 			)
+			path.append(rnd_point)
 			queue.append(rnd_point)
 			fixed.add(rnd_point)
 
 	checks = set(ind._cs)
-	used = [cs for cs in able_cs.values() if len(cs) >= 2]
+	used = [cs for cs in support.values() if len(cs) >= 2]
 	used = set(chain.from_iterable(used))
 	checks.difference_update(used)
 	del used
 	checks = list(checks)
 
-	print(f"origin: {root}")
+	print(f"root: {root}")
 	print(f"checks: {checks}")
-	display(graph, checks)
+	# display(graph, checks)
+
+	pos = {}
+	ind_in_finite = [0]*len(path)
+
+	for check in checks:
+		max_ind = max([path.index(p) for p in check.points])
+		support[path[max_ind]].append(check)
+
+	for i, p in enumerate(path):
+		space = All()
+		for c in support[p]:
+			if c == ARBITRARY:
+				space = choose(space)
+			else:
+				space = meet(space, c.to_geo(pos, p))
+		if isinstance(space, list):
+			space = space[ind_in_finite[i]]
+		assert isinstance(space, Vec)
+		pos[p] = space
+
+	print(pos)
 
 	quit()
-
-	pos[root] = Vec(0,0)
 	
 	return pos
 
 def display(con_graph: nx.DiGraph, checks: list):
-	graph = nx.Graph()
-	edge_colors = []
 	edge_labels = {}
 
 	for (u, v, cs) in con_graph.edges.data("cs"):
-		graph.add_edge(
-			u, v,
-			color = "black"
-		)
 		edge_labels[(u,v)] = "\n".join([str(c) for c in cs])
 
-	for check in checks:
-		# TODO: Accurately represent checks with
-		# more than 2 points.
-		u, v = check.points[0], check.points[1]
-		if graph.has_edge(u, v): continue
-		graph.add_edge(
-			u, v,
-			color = "red"
-		)
-		edge_labels[(u,v)] = str(check)
+	pos = tree_pos(con_graph)
 	
-	edge_colors = [color for _,_,color in graph.edges.data("color")]
+	for check in checks:
+		draw_check(check, pos)
 
-	pos = nx.spring_layout(graph)
 	nx.draw_networkx(
-		graph, pos,
-		edge_color=edge_colors
+		con_graph, pos
 	)
 	nx.draw_networkx_edge_labels(
-		graph, pos,
+		con_graph, pos,
 		edge_labels=edge_labels,
 		font_size=9
 	)
 	plt.show()
+
+def draw_check(check, pos):
+	po = [pos[p] for p in check.points]
+	po.sort()
+	po = np.stack(po)
+	min_x, min_y = np.min(po, axis=0) - 0.5
+	max_x, max_y = np.max(po, axis=0) + 0.5
+	min_y -= 0.1*(min_x%3)
+	max_y -= 0.1*(min_x%3)
+	new_pos = [
+		(min_x, min_y),
+		(min_x, max_y),
+		(max_x, max_y),
+		(max_x, min_y),
+	]
+	po = np.stack(new_pos).T
+	plt.fill(
+		po[0], po[1],
+		facecolor=(1,0,0,0.05),
+		edgecolor=(1,0,0,0.5), linewidth=1
+	)
+	plt.annotate(
+		str(check),
+		(min_x, min_y),
+		bbox = {
+			"boxstyle": "round",
+			"ec": (1.0, 0.0, 0.0, 0.5),
+			"fc": (1.0, 1.0, 1.0)
+		}
+	)

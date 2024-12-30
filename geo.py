@@ -91,6 +91,13 @@ def _key(obj) -> int:
         case Line(): return 2
         case Circle(): return 3
 
+def choose(space) -> Vec:
+    match space:
+        case All(): return Vec(0,0)
+        case Vec(): return space
+        case Ray() | Line(): return space.along(1)
+        case Circle(): return Vec(space.r, 0)
+
 def dist(space_1, space_2) -> float:
     if not isinstance(space_1, list): space_1 = [space_1]
     if not isinstance(space_2, list): space_2 = [space_2]
