@@ -30,13 +30,13 @@ Examples:
 
 Angles
 -----------------
-Angles can be specified in radians (rad), degrees (d, deg, °),
+Angles can be specified in radians (rad), degrees (deg, °),
 gradians (grad), or revolutions (rev).
 
 Angles can also have specified direction.
 
-CW, ⭮, ⥁, ⟳, ↻, ↷, or - denotes clockwise.
-CCW, ACW, ⭯, ⥀, ⟲, ↺, ↶ or +  denotes counter-clockwise / anti-clockwise.
+⭮, ⥁, ⟳, ↻, ↷, or - denotes clockwise.
+⭯, ⥀, ⟲, ↺, ↶, or +  denotes counter-clockwise / anti-clockwise.
 
 
 ===========================
