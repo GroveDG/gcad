@@ -117,7 +117,7 @@ def solve_figure(ind: Index, root = None):
 				return True
 		print(f"Backtrack from {p}")
 
-	assert explore(0)
+	assert explore(0), "Over-constrained and unsolvable."
 	
 	return pos
 
