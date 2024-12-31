@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 import numpy as np
-from math import sin, cos, sqrt, isclose
+from math import sin, cos, sqrt, isclose, atan2
 from itertools import product
 from util import ff
 
@@ -19,10 +19,16 @@ class Vec(np.ndarray):
     @property
     def x(self) -> float:
         return self[0]
+    @x.setter
+    def x(self, v):
+        self[0] = v
     
     @property
     def y(self) -> float:
         return self[1]
+    @y.setter
+    def y(self, v):
+        self[1] = v
     
     @property
     def mag(self) -> float:
@@ -34,19 +40,16 @@ class Vec(np.ndarray):
     def polar(angle, r=1) -> Self:
         return r*Vec(cos(angle), sin(angle))
     
-    def rotate(self, angle) -> Self:
-        c = cos(angle)
-        s = sin(angle)
-        rotation = np.asarray([
-            [c, -s],
-            [s, c]
-        ])
-        return self.transform(rotation)
+    def rot_both(self, angle, mag=1) -> Self:
+        t = atan2(self.y, self.x)
+        t_p = t + angle
+        t_n = t - angle
+        p = Vec.from_angle(t_p) * mag
+        n = Vec.from_angle(t_n) * mag
+        return p, n
     
-    def transform(self, matrix) -> Self:
-        col = self.reshape(-1, 1)
-        col = matrix @ col
-        return col[:, 0]
+    def from_angle(angle) -> Self:
+        return Vec(cos(angle), sin(angle))
     
     def __repr__(self) -> str:
         return f"({ff(self.x)}, {ff(self.y)})"
@@ -96,7 +99,7 @@ def choose(space) -> Vec:
         case All(): return Vec(0,0)
         case Vec(): return space
         case Ray() | Line(): return space.along(1)
-        case Circle(): return Vec(space.r, 0)
+        case Circle(): return space.o + Vec(space.r, 0)
 
 def dist(space_1, space_2) -> float:
     if not isinstance(space_1, list): space_1 = [space_1]

@@ -38,6 +38,8 @@ def solve_figure(ind: Index, root = None):
 				loose = set(c.points).difference(fixed)
 				if len(loose) != 1: continue
 				loose, = loose
+				
+				if len(support[loose]) == 2: continue
 
 				support[loose].append(c)
 
@@ -59,7 +61,7 @@ def solve_figure(ind: Index, root = None):
 		# TODO: Support isolated sub-figures. 
 		# (Arbitrary selection on unconstrained points)
 		# TODO: Design optimal selection method.
-		continuums = set(support.keys()).difference(fixed)
+		continuums = set([p for p, v in support.items() if len(v)>0]).difference(fixed)
 		if len(continuums) > 0:
 			rnd_point = continuums.pop()
 			support[rnd_point].append(ARBITRARY)
@@ -71,6 +73,10 @@ def solve_figure(ind: Index, root = None):
 			path.append(rnd_point)
 			queue.append(rnd_point)
 			fixed.add(rnd_point)
+		elif len(set(ind.points).difference(fixed)) == 0:
+			break
+		else: 
+			raise ValueError(f"Figure underspecified from root: {root}\nPath taken: {path}\nCurrent point: {p}")
 
 	checks = set(ind._cs)
 	used = [cs for cs in support.values() if len(cs) >= 2]
@@ -81,30 +87,38 @@ def solve_figure(ind: Index, root = None):
 
 	print(f"root: {root}")
 	print(f"checks: {checks}")
+	print(f"path: {path}")
+	print(support)
 	# display(graph, checks)
 
 	pos = {}
-	ind_in_finite = [0]*len(path)
 
 	for check in checks:
 		max_ind = max([path.index(p) for p in check.points])
 		support[path[max_ind]].append(check)
 
-	for i, p in enumerate(path):
+	def explore(i):
+		p = path[i]
 		space = All()
 		for c in support[p]:
 			if c == ARBITRARY:
 				space = choose(space)
 			else:
-				space = meet(space, c.to_geo(pos, p))
-		if isinstance(space, list):
-			space = space[ind_in_finite[i]]
-		assert isinstance(space, Vec)
-		pos[p] = space
+				g = c.to_geo(pos, p)
+				space = meet(space, g)
+		if isinstance(space, Vec):
+			space = [space]
+		assert isinstance(space, list)
+		for s in space:
+			assert isinstance(s, Vec)
+			pos[p] = s
+			if i == len(path)-1:
+				return True
+			elif explore(i+1):
+				return True
+		print(f"Backtrack from {p}")
 
-	print(pos)
-
-	quit()
+	assert explore(0)
 	
 	return pos
 

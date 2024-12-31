@@ -6,6 +6,7 @@ from abc import abstractmethod
 from index import Index
 import geo
 from util import *
+from math import sin, cos, isclose
 
 UREG = UnitRegistry()
 
@@ -104,15 +105,43 @@ class Angle(Assignable, Constraint):
 
     def to_geo(self, pos, target):
         if target == self.vertex:
-            raise ValueError("Angle cannot constrain vertex.")
-        center = pos[self.vertex]
-        base_point = self.end if self.start == target else self.start
-        base_pos = pos[base_point]
-        base: geo.Vec = (base_pos - center).normalized()
-        return [
-            geo.Ray(center, base.rotate(self.measure)),
-            geo.Ray(center, base.rotate(-self.measure))
-        ]
+            # The space is a circle where the known points
+            # create a chord. The circle circumscribes an
+            # isosceles triangle. The space bellow the line
+            # is not valid as the angles sum to over pi.
+            # TODO: Replace with arc.
+            # Inscribed angles which intercept the same arc
+            # are equal.
+            # This is the reverse of a circle-circle
+            # intersection.
+            # https://www.desmos.com/calculator/ecwcottxwy
+            p0, p1 = pos[self.start], pos[self.end]
+            l = (p1-p0).mag
+            assert l != 0
+            # Chord length solved for radius
+            r = (l/2)/sin(self.measure)
+            mid = (p0+p1)/2 # Midpoint
+            a = r*cos(self.measure) # Apothem
+            if isclose(a, 0, abs_tol=1e-9):
+                return geo.Circle(mid, r)
+            else:
+                v = (p1-p0)/l # Direction
+                v.x, v.y = -v.y, v.x # Perpendicular
+                v *= a # Vector apothem
+                return [
+                    geo.Circle(mid+v, r),
+                    geo.Circle(mid-v, r)
+                ]
+        else:
+            center = pos[self.vertex]
+            base_point = self.end if self.start == target else self.start
+            base_pos = pos[base_point]
+            base: geo.Vec = (base_pos - center).normalized()
+            p, n = base.rot_both(self.measure)
+            return [
+                geo.Ray(center, p),
+                geo.Ray(center, n)
+            ]
     
     def __str__(self):
         return f"∠{' '.join(self.points)} = {ff(self.measure)}"
