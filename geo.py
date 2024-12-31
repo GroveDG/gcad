@@ -224,13 +224,21 @@ def _line_circle(l: Line, c: Circle): # https://en.wikipedia.org/wiki/Line%E2%80
 
 def _circle_circle(c1: Circle, c2: Circle): # https://stackoverflow.com/a/3349134
     d = dist(c1.o, c2.o)
+    # One circle is contained in the other
+    if d < abs(c1.r - c2.r): return
+    # The circles are separate
     if d > c1.r + c2.r: return
+    # Apothem to intersection chord
     a = (c1.r**2 - c2.r**2 + d**2)/(2*d)
+    # Direction to chord/other circle
     dir: Vec = (c2.o-c1.o)/d
+    # Chord center
     center = c1.o + a*dir
-    if d == c1.r + c2.r:
-        return center
+    # The circles intersect at one point
+    if isclose(d, c1.r + c2.r): return center
+    # Half chord length (or) height of points
     h = sqrt(c1.r**2 - a**2)
+    # Vector from center to point
     h_v = h*Vec(dir.y,-dir.x)
     return [center+h_v, center-h_v]
 

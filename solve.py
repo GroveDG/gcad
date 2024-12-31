@@ -9,6 +9,7 @@ from time import time
 import cProfile
 import pstats
 from index import Index
+from matplotlib import pyplot as plt
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -34,6 +35,10 @@ def solve(exprs: List[BaseExpr], profile=False, **kwargs):
         end = time()
         print(end-start)
         print(pos)
+        for point, p in pos.items():
+            plt.plot(p.x, p.y, marker='o')
+            plt.annotate(point, (p.x, p.y))
+        plt.show()
 
 def solve_file(filepath, **kwargs):
 	exprs = read_file(filepath)

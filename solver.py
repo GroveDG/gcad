@@ -3,9 +3,8 @@ from matplotlib import pyplot as plt
 from util import *
 from index import Index
 from geo import *
-from itertools import permutations, pairwise, chain
-from collections import namedtuple, deque
-import parsing
+from itertools import chain
+from collections import deque
 
 ARBITRARY = "Arbitrary"
 
