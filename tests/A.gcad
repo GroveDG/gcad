@@ -1,12 +1,11 @@
-∠R L T = ∠L R T = 1.2
-|L R| = 100
+∠MR ML MT = ∠ML MR MT = 1.2
+∠MT MR PR = ∠MT ML PL = 1.570796327
+T PR || MR MT
+ML MT || T PL
 |ML MR| = 70
 |BC ABC| = 30
-|R MR| = |ML L| = |ABC MT| = |BC MT| = 15
-R-MR-ML-L-C
-T-MT-C-ABC
-BL BC ∥ BC BR ∥ R L
-L-BL-T
-R-BR-T
-R T ∥ MR MT
-L T ∥ ML MT
+|PR MR| = |ML PL| = |ABC MT| = |BC MT| = 15
+T-MT-ABC
+BL BC ∥ BC BR ∥ MR ML
+PL-BL-T
+PR-BR-T

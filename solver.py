@@ -102,6 +102,9 @@ def solve_figure(ind: Index, root = None):
 			space = choose(space)
 		if isinstance(space, Vec):
 			space = [space]
+		if space == None:
+			print(f"Backtrack from {p}")
+			return
 		assert isinstance(space, list)
 		for s in space:
 			assert isinstance(s, Vec)
