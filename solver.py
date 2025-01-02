@@ -29,28 +29,20 @@ def solve_figure(ind: Index, root = None):
 			p = queue.pop()
 			to_queue = set()
 			for c in ind.get_constraints(p):
-				# Assumption:
-				#  A constraint must have all points
-				#  except for one to be applied.
-				# TODO: Allow constraints to specify
-				# required points.
-				loose = set(c.points).difference(fixed)
-				if len(loose) != 1: continue
-				loose, = loose
-				
-				if len(support[loose]) == 2: continue
+				for loose in c.targets(fixed):
+					if len(support[loose]) == 2: continue
 
-				support[loose].append(c)
+					support[loose].append(c)
 
-				# Assumption:
-				#  2 constraints are always finite.
-				# TODO: Rigorously determine finiteness
-				if len(support[loose]) == 2:
-					graph.add_edge(
-						p, loose,
-						cs = support[loose]
-					)
-					to_queue.add(loose)
+					# Assumption:
+					#  2 constraints are always finite.
+					# TODO: Rigorously determine finiteness
+					if len(support[loose]) == 2:
+						graph.add_edge(
+							p, loose,
+							cs = support[loose]
+						)
+						to_queue.add(loose)
 			for q in to_queue:
 				path.append(q)
 				queue.append(q)

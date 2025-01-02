@@ -33,6 +33,10 @@ class Constraint(BaseExpr):
     def apply(self, ind: Index):
         ind.add_constraint(self)
 
+    def targets(self, known: List[str]) -> List[str]:
+        unknown = [p for p in self.points if p not in known]
+        return unknown if len(unknown) == 1 else []
+
     @abstractmethod
     def to_geo(self, pos, target): pass
 
@@ -168,17 +172,30 @@ Angle.parser.set_parse_action(Angle)
 #         )
 # Line.parser.set_parse_action(Line)
 
-# class Collinear(BaseExpr):
-#     parser = DelimitedList(
-#         Point.parser("points*"), "-", min=3
-#     )
-#     symbol = "⋮"
+class Collinear(Constraint):
+    parser = DelimitedList(
+        Point.parser("points*"), "-", min=3
+    )
+    symbol = "⋮"
 
-#     points: Set[Point]
+    def __init__(self, res: ParseResults) -> None:
+        self.points = [p.id for p in res.points]
 
-#     def __init__(self, res: ParseResults) -> None:
-#         self.points = res.points
-# Collinear.parser.set_parse_action(Collinear)
+    def targets(self, known: List[str]) -> List[str]:
+        if len([p for p in self.points if p in known]) >= 2:
+            unknown = [p for p in self.points if p not in known]
+            return unknown
+        else:
+            return []
+    
+    def to_geo(self, pos, _):
+        known = [p for p in self.points if p in pos]
+        assert len(known) >= 2
+        return geo.Line(
+            pos[known[0]],
+            (pos[known[1]]-pos[known[0]]).normalized()
+        )
+Collinear.parser.set_parse_action(Collinear)
 
 class Parallel(Constraint):
     parser = DelimitedList(
@@ -188,6 +205,22 @@ class Parallel(Constraint):
 
     def __init__(self, res: ParseResults) -> None:
         self.points = [p.id for p in res]
+
+    def targets(self, known: List[str]) -> List[str]:
+        is_known_pair = False
+        targets = []
+        for i in range(int(len(self.points)/2)):
+            know_0 = self.points[2*i] in known
+            know_1 = self.points[2*i+1] in known
+            if know_0 and know_1:
+                is_known_pair = True
+                continue
+            if not know_0 and not know_1:
+                continue
+            targets.append(
+                self.points[2*i] if know_1 else self.points[2*i+1]
+            )
+        return targets if is_known_pair else []
     
     def to_geo(self, pos, target):
         t_ind = self.points.index(target)
@@ -199,7 +232,6 @@ class Parallel(Constraint):
             v = (pos[p1]-pos[p0]).normalized()
             print(p0, p1)
             break
-        print(pos[o_p], v)
         return geo.Line(pos[o_p], v)
 Parallel.parser.add_parse_action(Parallel)
 
@@ -244,7 +276,7 @@ EXPRESSIONS: List[BaseExpr] = [
     Point,
     # Line,
     Angle,
-    # Collinear,
+    Collinear,
     Parallel,
     # Perpendicular,
     Distance,

@@ -1,0 +1,2 @@
+The a point being intersection of two lines is
+the same as it being collinear to those lines.
