@@ -6,7 +6,7 @@ from abc import abstractmethod
 from index import Index
 import geo
 from util import *
-from math import sin, cos, isclose
+from math import sin, cos, isclose, floor
 
 UREG = UnitRegistry()
 
@@ -180,17 +180,28 @@ Angle.parser.set_parse_action(Angle)
 #         self.points = res.points
 # Collinear.parser.set_parse_action(Collinear)
 
-# class Parallel(BaseExpr):
-#     parser = DelimitedList(
-#         Line.parser("lines*"), one_of("||", "∥"), min=2
-#     )
-#     symbol = "∥"
+class Parallel(Constraint):
+    parser = DelimitedList(
+        Point.parser + Point.parser, one_of("||", "∥"), min=2
+    )
+    symbol = "∥"
 
-#     lines: Set[Line]
-
-#     def __init__(self, res: ParseResults) -> None:
-#         self.lines = res.lines
-# Parallel.parser.add_parse_action(Parallel)
+    def __init__(self, res: ParseResults) -> None:
+        self.points = [p.id for p in res]
+    
+    def to_geo(self, pos, target):
+        t_ind = self.points.index(target)
+        o_ind = 2*floor(t_ind/2)+(t_ind%2+1)%2
+        o_p = self.points[o_ind]
+        for i in range(int(len(self.points)/2)):
+            p0, p1 = self.points[2*i:2*(i+1)]
+            if p0 not in pos or p1 not in pos: continue
+            v = (pos[p1]-pos[p0]).normalized()
+            print(p0, p1)
+            break
+        print(pos[o_p], v)
+        return geo.Line(pos[o_p], v)
+Parallel.parser.add_parse_action(Parallel)
 
 # class Perpendicular(BaseExpr):
 #     parser = DelimitedList(
@@ -234,7 +245,7 @@ EXPRESSIONS: List[BaseExpr] = [
     # Line,
     Angle,
     # Collinear,
-    # Parallel,
+    Parallel,
     # Perpendicular,
     Distance,
     Equality

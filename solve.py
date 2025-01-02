@@ -37,6 +37,7 @@ def solve(exprs: List[BaseExpr], profile=False, **kwargs):
         print(pos)
         for point, p in pos.items():
             plt.plot(p.x, p.y, marker='o')
+            plt.gca().set_aspect('equal')
             plt.annotate(point, (p.x, p.y))
         plt.show()
 
