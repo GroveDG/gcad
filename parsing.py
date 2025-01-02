@@ -40,6 +40,9 @@ class Constraint(BaseExpr):
     @abstractmethod
     def to_geo(self, pos, target): pass
 
+    def __repr__(self):
+        return self.__str__()
+
 # === Geometry ===
 
 class Point(BaseExpr):
@@ -83,8 +86,6 @@ class Distance(Assignable, Constraint):
     
     def __str__(self):
         return f"|{' '.join(self.points)}| = {ff(self.measure)}"
-    def __repr__(self):
-        return self.__str__()
 Distance.parser.add_parse_action(Distance)
 
 class Angle(Assignable, Constraint):
@@ -149,8 +150,6 @@ class Angle(Assignable, Constraint):
     
     def __str__(self):
         return f"∠{' '.join(self.points)} = {ff(self.measure)}"
-    def __repr__(self):
-        return self.__str__()
 Angle.parser.set_parse_action(Angle)
 
 # class Line(BaseExpr):
@@ -195,6 +194,8 @@ class Collinear(Constraint):
             pos[known[0]],
             (pos[known[1]]-pos[known[0]]).normalized()
         )
+    def __str__(self):
+        return "-".join(self.points)
 Collinear.parser.set_parse_action(Collinear)
 
 class Parallel(Constraint):
@@ -233,6 +234,11 @@ class Parallel(Constraint):
             print(p0, p1)
             break
         return geo.Line(pos[o_p], v)
+    def __str__(self):
+        return "∥".join([
+            f"{self.points[2*i]} {self.points[2*i+1]}"
+            for i in range(len(self.points)//2)
+        ])
 Parallel.parser.add_parse_action(Parallel)
 
 # class Perpendicular(BaseExpr):

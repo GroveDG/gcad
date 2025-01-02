@@ -20,8 +20,8 @@ def solve_figure(ind: Index, root = None):
 	queue = deque()
 	fixed = set([root])
 	queue.append(root)
-	support = {p: [] for p in ind.points}
-	support[root].append(ARBITRARY)
+	support = {p: set() for p in ind.points}
+	support[root].add(ARBITRARY)
 	path = [root]
 	
 	while len(queue) > 0:
@@ -32,7 +32,7 @@ def solve_figure(ind: Index, root = None):
 				for loose in c.targets(fixed):
 					if len(support[loose]) == 2: continue
 
-					support[loose].append(c)
+					support[loose].add(c)
 
 					# Assumption:
 					#  2 constraints are always finite.
@@ -52,10 +52,10 @@ def solve_figure(ind: Index, root = None):
 		# TODO: Support isolated sub-figures. 
 		# (Arbitrary selection on unconstrained points)
 		# TODO: Design optimal selection method.
-		continuums = set([p for p, v in support.items() if len(v)>0]).difference(fixed)
+		continuums = set([p for p, v in support.items() if len(v)==1]).difference(fixed)
 		if len(continuums) > 0:
 			rnd_point = continuums.pop()
-			support[rnd_point].append(ARBITRARY)
+			support[rnd_point].add(ARBITRARY)
 			graph.add_edge(
 				p, rnd_point,
 				cs = support[rnd_point],
@@ -86,17 +86,20 @@ def solve_figure(ind: Index, root = None):
 
 	for check in checks:
 		max_ind = max([path.index(p) for p in check.points])
-		support[path[max_ind]].append(check)
+		support[path[max_ind]].add(check)
 
 	def explore(i):
 		p = path[i]
 		space = All()
+		arbitrary = False
 		for c in support[p]:
 			if c == ARBITRARY:
-				space = choose(space)
-			else:
-				g = c.to_geo(pos, p)
-				space = meet(space, g)
+				arbitrary = True
+				continue
+			g = c.to_geo(pos, p)
+			space = meet(space, g)
+		if arbitrary:
+			space = choose(space)
 		if isinstance(space, Vec):
 			space = [space]
 		assert isinstance(space, list)
