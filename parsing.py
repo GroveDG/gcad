@@ -200,7 +200,7 @@ Collinear.parser.set_parse_action(Collinear)
 
 class Parallel(Constraint):
     parser = DelimitedList(
-        Point.parser + Point.parser, one_of("||", "∥"), min=2
+        Point.parser + Point.parser, one_of(["||", "∥"]), min=2
     )
     symbol = "∥"
 
@@ -243,7 +243,7 @@ Parallel.parser.add_parse_action(Parallel)
 
 # class Perpendicular(BaseExpr):
 #     parser = DelimitedList(
-#         Line.parser("lines*"), one_of("_|_", "⊥"), min=2
+#         Line.parser("lines*"), one_of(["_|_", "⊥"]), min=2
 #     )
 #     symbol = "⊥"
 
