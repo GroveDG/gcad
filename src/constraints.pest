@@ -1,0 +1,7 @@
+point = @{ ASCII_ALPHA+ }
+
+parallel      = { SOI ~ point{2} ~ (("∥" | "||") ~ point{2}) ~ EOI }
+perpendicular = { SOI ~ point{2} ~ (("⊥" | "_|_") ~ point{2}) ~ EOI }
+collinear     = { SOI ~ point ~ ("-" ~ point)+ ~ EOI }
+
+WHITESPACE = _{ " " }

@@ -1,0 +1,8 @@
+point = @{ ASCII_ALPHA+ }
+
+dist  = { "|" ~ point{2} ~ "|" }
+angle = { ("<" | "∠") ~ point{3} }
+
+element = { SOI ~ (dist | angle) ~ EOI }
+
+WHITESPACE = _{ " " }

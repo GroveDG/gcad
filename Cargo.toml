@@ -1,0 +1,19 @@
+[package]
+name = "gcad-rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "gsolve"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gcad"
+path = "src/bin.rs"
+
+[dependencies]
+itertools = "0.14.0"
+lazy_static = "1.5.0"
+pest = "2.7.15"
+pest_derive = "2.7.15"
+serde = "1.0.217"
