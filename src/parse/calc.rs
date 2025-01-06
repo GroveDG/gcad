@@ -4,7 +4,7 @@ use pest::{iterators::Pairs, pratt_parser::PrattParser, Parser};
 use crate::vector::Number;
 
 #[derive(pest_derive::Parser)]
-#[grammar = "calc.pest"]
+#[grammar = "parse/calc.pest"]
 struct CalcParser;
 lazy_static! {
     static ref CALC_PARSER: PrattParser<Rule> = {
