@@ -9,6 +9,10 @@ pub enum Geo {
     All,
 }
 
+pub fn line_from_points(p0: Vector, p1: Vector, l: Number) -> Geo {
+    Geo::Linear { o: p0, v: (p1-p0).unit(), l }
+}
+
 pub fn closest_linear(o: Vector, v: Vector, l: Number, p: Vector) -> Vector {
     let mut t = (p - o).dot(v);
     t = Number::max(t, l);

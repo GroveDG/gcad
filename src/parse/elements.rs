@@ -1,6 +1,6 @@
 use pest::Parser;
 
-use crate::{constraints::Constraint, elements::{Angle, Distance, Point}, vector::Number};
+use crate::{constraints::{Constraint, elements::{Angle, Distance, Point}}, vector::Number};
 
 #[derive(pest_derive::Parser)]
 #[grammar = "parse/elements.pest"]
