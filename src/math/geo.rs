@@ -1,4 +1,4 @@
-use crate::vector::{AboutEq, Number, Vector};
+use crate::math::vector::{AboutEq, Number, Vector};
 use itertools::Itertools;
 
 #[derive(Debug, PartialEq, Clone, Copy)]

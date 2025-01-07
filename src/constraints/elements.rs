@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, slice};
 
 use itertools::Itertools;
 
-use crate::{constraints::Constraint, geo::Geo, vector::{AboutEq, Number, Vector}};
+use crate::{constraints::Constraint, math::{geo::Geo, vector::{AboutEq, Number, Vector}}};
 
 pub type Point = String;
 

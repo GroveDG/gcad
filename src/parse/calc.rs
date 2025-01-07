@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use pest::{iterators::Pairs, pratt_parser::PrattParser, Parser};
 
-use crate::vector::Number;
+use crate::math::vector::Number;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "parse/calc.pest"]

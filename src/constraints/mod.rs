@@ -2,8 +2,10 @@ use std::{collections::{HashMap, HashSet}, fmt::Debug};
 
 use crate::{
     constraints::elements::Point,
-    geo::Geo,
-    vector::Vector,
+    math::{
+        geo::Geo,
+        vector::Vector,
+    }
 };
 
 pub mod elements;

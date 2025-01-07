@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, f64::NEG_INFINITY};
 
 use itertools::Itertools;
 
-use crate::{geo::{line_from_points, Geo}, vector::Vector};
+use crate::{math::{geo::{line_from_points, Geo}, vector::Vector}};
 
 use super::{elements::Point, Constraint};
 
