@@ -92,7 +92,7 @@ impl Constraint for Angle {
             let b = pos[base];
             let b_v = (b-o).unit();
             let p = b_v.rot(self.measure);
-            let n = b_v.rot(self.measure);
+            let n = b_v.rot(-self.measure);
             vec![
                 Geo::Linear { o, v: p, l: 0.0 },
                 Geo::Linear { o, v: n, l: 0.0 }

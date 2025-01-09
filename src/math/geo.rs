@@ -10,7 +10,11 @@ pub enum Geo {
 }
 
 pub fn line_from_points(p0: Vector, p1: Vector, l: Number) -> Geo {
-    Geo::Linear { o: p0, v: (p1-p0).unit(), l }
+    Geo::Linear {
+        o: p0,
+        v: (p1 - p0).unit(),
+        l,
+    }
 }
 
 pub fn closest_linear(o: Vector, v: Vector, l: Number, p: Vector) -> Vector {
@@ -107,7 +111,7 @@ pub fn intersect(g0: Geo, g1: Geo) -> Vec<Geo> {
             }
             .into_iter()
             .filter_map(|t| {
-                if t < l {
+                if t >= l {
                     Some(Geo::Point {
                         p: along_linear(o, v, t),
                     })
@@ -151,12 +155,11 @@ pub fn dist(p: Vector, g: Geo) -> Number {
     }
 }
 
-pub fn choose(g: Geo) -> Geo {
-    let p = match g {
+pub fn choose(g: Geo) -> Vector {
+    match g {
         Geo::All => Vector::ZERO,
         Geo::Point { p } => p,
-        Geo::Linear { o, v, l } => todo!(),
+        Geo::Linear { o, v, l } => along_linear(o, v, l.max(0.0) + 1.0),
         Geo::Circle { c, r } => Vector::POSX * r + c,
-    };
-    Geo::Point { p }
+    }
 }

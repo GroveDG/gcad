@@ -1,18 +1,17 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use itertools::Itertools;
 use multimap::MultiMap;
-use slab_tree::{Tree, TreeBuilder};
 
 use crate::constraints::{elements::Point, Constraint};
 
-use super::{print_tree, PointIndex};
+use super::PointIndex;
 
 fn add_constraints<'a>(
     index: &'a PointIndex,
     points: &HashSet<&Point>,
     point: &Point,
-    support: &mut MultiMap<&'a Point, &'a Box<dyn Constraint>>
+    support: &mut MultiMap<&'a Point, &'a dyn Constraint>
 ) -> Vec<&'a Point> {
     // For all constraints containing this point...
     index.get_constraints(point).into_iter().map(|c| {
@@ -39,36 +38,33 @@ pub fn compute_tree<'a>(
     root: &'a Point,
     orbiter: &'a Point,
     index: &'a PointIndex,
-) -> (Tree<&'a Point>, HashSet<&'a Point>) {
+) -> (Vec<&'a Point>, HashSet<&'a Point>, MultiMap<&'a Point, &'a dyn Constraint>) {
     let mut support = MultiMap::new();
     let mut points: HashSet<&Point> = HashSet::from_iter([root]);
     add_constraints(index, &points, root, &mut support);
     points.insert(orbiter);
-    let mut tree = TreeBuilder::new().with_root(root).build();
-    let mut queue = VecDeque::from_iter([
-        (orbiter, tree.root_mut().unwrap().append(orbiter).node_id())
-    ]);
+    let mut i = 1;
+    let mut order = Vec::from_iter([root, orbiter]);
     // Supporting constraints.
     // Any constraints which can be applied to a point for a given set of
     // previous points.
     // If any point has 2 or more constraints it is assumed to be discrete.
-    while !queue.is_empty() {
-        let (point, node_id) = queue.pop_front().unwrap();
+    while i < order.len() {
+        let point = order[i];
+        // Mark as known.
+        points.insert(point);
         let next = add_constraints(index, &points, point, &mut support);
         for p in next {
-            // Mark as known.
-            points.insert(p);
-            // Queue after all current points.
-            queue.push_back((p, node_id));
-            // Add as child.
-            tree.get_mut(node_id).unwrap().append(p);
+            // Add into order.
+            order.push(p);
         }
+        i += 1;
     }
-    (tree, points)
+    (order, points, support)
 }
 
-pub fn compute_forest(index: &PointIndex) -> Vec<Tree<&Point>> {
-    let mut forest: Vec<(Tree<&Point>, HashSet<&Point>)> = Vec::new();
+pub fn compute_forest(index: &PointIndex) -> Vec<Vec<(Point, Vec<&dyn Constraint>)>> {
+    let mut forest: Vec<(Vec<&Point>, HashSet<&Point>, MultiMap<&Point, &dyn Constraint>)> = Vec::new();
     for [root, orbiter] in index
         // Iterate through points...
         .get_points()
@@ -100,32 +96,34 @@ pub fn compute_forest(index: &PointIndex) -> Vec<Tree<&Point>> {
         .unique()
     {
         // If this root pair is contained in any tree, skip it.
-        if forest.iter().any(|(_, p)| {
+        if forest.iter().any(|(_, p, _)| {
             p.contains(root) && p.contains(orbiter)
         }) { continue }
         // Compute this pair's tree.
-        let (tree, points) = compute_tree(root, orbiter, &index);
+        let (order, points, support) = compute_tree(root, orbiter, &index);
         // Iterate through trees...
         forest = forest
             .into_iter()
             // and discard any contained by this new tree.
-            .filter(|(_, p)| {
+            .filter(|(_, p, _)| {
                 !points.is_superset(p)
             })
             .collect();
         // Add this new tree.
-        forest.push((tree, points));
+        forest.push((order, points, support));
     }
 
-    forest.into_iter().map(|(t, _)| {
-        t
-    }).collect()
+    forest.into_iter().map(|(t, _, mut s)| {
+        t.into_iter().map(|p| {
+            (p.clone(), s.remove(p).unwrap_or_else(|| Vec::new()))
+        }).collect::<Vec<(Point, Vec<&dyn Constraint>)>>()
+    }).collect::<Vec<Vec<(Point, Vec<&dyn Constraint>)>>>()
 }
 
-pub fn bfs_order(constraints: Vec<Box<dyn Constraint>>) {
-    let index = PointIndex::from_constraints(constraints);
-    let forest: Vec<Tree<&String>> = compute_forest(&index);
-    for tree in forest {
-        print_tree(tree);
+pub fn bfs_order(index: &PointIndex) -> Vec<(Point, Vec<&dyn Constraint>)> {
+    let mut o = Vec::new();
+    for mut t in compute_forest(&index) {
+        o.append(&mut t);
     }
+    o
 }
