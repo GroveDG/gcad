@@ -150,3 +150,13 @@ pub fn dist(p: Vector, g: Geo) -> Number {
         Geo::Circle { c, r } => p.dist(c) - r,
     }
 }
+
+pub fn choose(g: Geo) -> Geo {
+    let p = match g {
+        Geo::All => Vector::ZERO,
+        Geo::Point { p } => p,
+        Geo::Linear { o, v, l } => todo!(),
+        Geo::Circle { c, r } => Vector::POSX * r + c,
+    };
+    Geo::Point { p }
+}

@@ -1,14 +1,20 @@
-use std::{collections::{HashMap, HashSet}, f64::NEG_INFINITY};
+use std::{collections::{HashMap, HashSet}, f64::NEG_INFINITY, fmt::Display};
 
 use itertools::Itertools;
 
-use crate::{math::{geo::{line_from_points, Geo}, vector::Vector}};
+use crate::math::{geo::{line_from_points, Geo}, vector::Vector};
 
 use super::{elements::Point, Constraint};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Collinear {
     pub points: Vec<String>
+}
+
+impl Display for Collinear {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.points.join(" - "))
+    }
 }
 
 impl Constraint for Collinear {
@@ -16,7 +22,7 @@ impl Constraint for Collinear {
         self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<Point>) -> &[String] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> &[String] {
         if self.points().iter().filter(|&p|{
             !known_points.contains(p)
         }).count() >= 2 { self.points.as_slice() } else { &[] }

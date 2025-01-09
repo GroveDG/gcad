@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, slice};
+use std::{collections::{HashMap, HashSet}, fmt::Display, slice};
 
 use itertools::Itertools;
 
@@ -11,12 +11,19 @@ pub struct Distance {
     pub points: [Point; 2],
     pub dist: Number
 }
+
+impl Display for Distance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "| {} {} | = {}", self.points[0], self.points[1], self.dist)
+    }
+}
+
 impl Constraint for Distance {
     fn points(&self) -> &[Point] {
         return self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<Point>) -> &[Point] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> &[Point] {
         if let Ok(t) = self.points().iter().filter(|&p|{
             !known_points.contains(p)
         }).exactly_one() { slice::from_ref(t) } else { &[] }
@@ -37,12 +44,19 @@ pub struct Angle {
     pub points: [Point; 3],
     pub measure: Number
 }
+
+impl Display for Angle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "∠ {} {} {} = {}", self.points[0], self.points[1], self.points[2], self.measure)
+    }
+}
+
 impl Constraint for Angle {
     fn points(&self) -> &[Point] {
         return self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<Point>) -> &[Point] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> &[Point] {
         if let Ok(t) = self.points().iter().filter(|&p|{
             !known_points.contains(p)
         }).exactly_one() { slice::from_ref(t) } else { &[] }

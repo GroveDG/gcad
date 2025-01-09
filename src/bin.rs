@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 
+use gsolve::order::bfs_order;
 use gsolve::parse::parse_document;
 
 fn main() -> Result<(), String> {
@@ -14,7 +15,11 @@ fn main() -> Result<(), String> {
 
     let doc = parse_document(contents)?;
 
-    println!("{:?}", doc);
+    for c in doc.iter() {
+        println!("{}", c);
+    }
+
+    bfs_order(doc);
 
     Ok(())
 }

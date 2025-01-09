@@ -12,9 +12,10 @@ name = "gcad"
 path = "src/bin.rs"
 
 [dependencies]
+bimap = "0.6.3"
 itertools = "0.14.0"
 lazy_static = "1.5.0"
 multimap = "0.10.0"
 pest = "2.7.15"
 pest_derive = "2.7.15"
-serde = "1.0.217"
+slab_tree = "0.3.2"
