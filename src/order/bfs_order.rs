@@ -64,7 +64,6 @@ pub fn compute_tree<'a>(
             tree.get_mut(node_id).unwrap().append(p);
         }
     }
-    println!("{:?}", support);
     (tree, points)
 }
 
@@ -87,7 +86,7 @@ pub fn compute_forest(index: &PointIndex) -> Vec<Tree<&Point>> {
                 // combine these sets of points...
                 .flatten()
                 // get only the unique points...
-                .unique()
+                .unique() 
                 // and map them in pairs with the root.
                 .map(move |orbiter| {
                     let mut ps = [root, orbiter];
@@ -117,6 +116,7 @@ pub fn compute_forest(index: &PointIndex) -> Vec<Tree<&Point>> {
         // Add this new tree.
         forest.push((tree, points));
     }
+
     forest.into_iter().map(|(t, _)| {
         t
     }).collect()

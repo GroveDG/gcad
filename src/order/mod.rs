@@ -52,7 +52,7 @@ pub(crate) fn print_tree<T: Display>(tree: Tree<T>) {
 fn print_node<T: Display>(node: NodeRef<T>, i: usize) {
     println!(
         "{}{}{}",
-        " ".repeat(i),
+        " ".repeat(i.saturating_sub(1)),
         if i == 0 {" "} else {"⮡ "},
         node.data()
     );
