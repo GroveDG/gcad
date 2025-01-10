@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{fmt::Display, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign}};
 
 pub trait AboutEq {
     fn about_eq(self, v: Self) -> bool;
@@ -25,10 +25,14 @@ pub struct Vector {
 
 impl Vector {
     pub const ZERO: Vector = Vector { x: 0.0, y: 0.0 };
+
     pub const POSY: Vector = Vector { x: 0.0, y: 1.0 };
     pub const NEGY: Vector = Vector { x: 0.0, y: -1.0 };
     pub const POSX: Vector = Vector { x: 1.0, y: 0.0 };
     pub const NEGX: Vector = Vector { x: -1.0, y: 0.0 };
+    
+    pub const POSINF: Vector = Vector { x: Number::INFINITY, y: Number::INFINITY };
+    pub const NEGINF: Vector = Vector { x: Number::NEG_INFINITY, y: Number::NEG_INFINITY };
 
     pub fn mag(self) -> Number {
         Number::sqrt(self.x * self.x + self.y * self.y)
@@ -71,6 +75,27 @@ impl Vector {
     }
 }
 
+impl Display for Vector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({:.2}, {:.2})", self.x, self.y)
+    }
+}
+
+pub fn bounding_box<'a, I>(vectors: I) -> (Vector, Vector)
+where
+    I: IntoIterator<Item = &'a Vector>,
+{
+    let mut min = Vector::POSINF;
+    let mut max = Vector::NEGINF;
+    for v in vectors.into_iter() {
+        if v.x < min.x { min.x = v.x }
+        if v.y < min.y { min.y = v.y }
+        if v.x > max.x { max.x = v.x }
+        if v.y > max.y { max.y = v.y }
+    }
+    (min, max)
+}
+
 impl AboutEq for Vector {
     fn about_eq(self, v: Self) -> bool {
         self.x.about_eq(v.x) && self.y.about_eq(v.y)
@@ -92,6 +117,13 @@ impl Add for Vector {
     }
 }
 
+impl AddAssign for Vector {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
 impl Add<Number> for Vector {
     type Output = Vector;
 
@@ -100,6 +132,13 @@ impl Add<Number> for Vector {
             x: self.x + rhs,
             y: self.y + rhs,
         }
+    }
+}
+
+impl AddAssign<Number> for Vector {
+    fn add_assign(&mut self, rhs: Number) {
+        self.x += rhs;
+        self.y += rhs;
     }
 }
 
@@ -114,6 +153,13 @@ impl Sub for Vector {
     }
 }
 
+impl SubAssign for Vector {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+
 impl Sub<Number> for Vector {
     type Output = Vector;
 
@@ -122,6 +168,13 @@ impl Sub<Number> for Vector {
             x: self.x - rhs,
             y: self.y - rhs,
         }
+    }
+}
+
+impl SubAssign<Number> for Vector {
+    fn sub_assign(&mut self, rhs: Number) {
+        self.x -= rhs;
+        self.y -= rhs;
     }
 }
 
@@ -136,6 +189,13 @@ impl Mul for Vector {
     }
 }
 
+impl MulAssign for Vector {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+    }
+}
+
 impl Mul<Number> for Vector {
     type Output = Vector;
 
@@ -144,6 +204,13 @@ impl Mul<Number> for Vector {
             x: self.x * rhs,
             y: self.y * rhs,
         }
+    }
+}
+
+impl MulAssign<Number> for Vector {
+    fn mul_assign(&mut self, rhs: Number) {
+        self.x *= rhs;
+        self.y *= rhs;
     }
 }
 
@@ -158,6 +225,13 @@ impl Div for Vector {
     }
 }
 
+impl DivAssign for Vector {
+    fn div_assign(&mut self, rhs: Self) {
+        self.x /= rhs.x;
+        self.y /= rhs.y;
+    }
+}
+
 impl Div<Number> for Vector {
     type Output = Vector;
 
@@ -166,5 +240,12 @@ impl Div<Number> for Vector {
             x: self.x / rhs,
             y: self.y / rhs,
         }
+    }
+}
+
+impl DivAssign<Number> for Vector {
+    fn div_assign(&mut self, rhs: Number) {
+        self.x /= rhs;
+        self.y /= rhs;
     }
 }

@@ -1,6 +1,10 @@
 use std::env;
 use std::fs;
 
+use draw::render;
+use draw::SvgRenderer;
+use gsolve::draw::draw;
+use gsolve::math::vector::bounding_box;
 use gsolve::order::bfs_order;
 use gsolve::order::PointIndex;
 use gsolve::parse::parse_document;
@@ -26,7 +30,17 @@ fn main() -> Result<(), String> {
 
     let positions = dist_solve(order)?;
 
-    println!("{:?}", positions);
+    for (point, pos) in positions.iter() {
+        println!("{}: {}", point, pos);
+    }
+
+    let canvas = draw(positions, 96.0);
+
+    render::save(
+        &canvas,
+        "figure.svg",
+        SvgRenderer::new()
+    ).or(Err("render failed".to_string()))?;
 
     Ok(())
 }
