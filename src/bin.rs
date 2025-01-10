@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 
+use ansi_term::Style;
 use draw::render;
 use draw::SvgRenderer;
 use gsolve::draw::draw;
@@ -20,7 +21,7 @@ fn main() -> Result<(), String> {
 
     let doc = parse_document(contents)?;
 
-    println!("\nConstraints:");
+    println!("\n{}", Style::new().underline().paint("Constraints"));
     for c in doc.iter() {
         println!("{}", c);
     }
@@ -28,7 +29,7 @@ fn main() -> Result<(), String> {
     let index = PointIndex::from_constraints(doc);
     let order = bfs_order(&index);
 
-    println!("\nConstraints by Point:");
+    println!("\n{}", Style::new().underline().paint("Constraints by Point"));
     for (point, cs) in order.iter() {
         println!("{}:", point);
         for &c in cs {
@@ -38,7 +39,7 @@ fn main() -> Result<(), String> {
 
     let positions = dist_solve(order)?;
 
-    println!("\nPositions:");
+    println!("\n{}", Style::new().underline().paint("Positions"));
     for (point, pos) in positions.iter() {
         println!("{}: {}", point, pos);
     }
