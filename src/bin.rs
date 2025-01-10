@@ -20,6 +20,7 @@ fn main() -> Result<(), String> {
 
     let doc = parse_document(contents)?;
 
+    println!("\nConstraints:");
     for c in doc.iter() {
         println!("{}", c);
     }
@@ -27,8 +28,17 @@ fn main() -> Result<(), String> {
     let index = PointIndex::from_constraints(doc);
     let order = bfs_order(&index);
 
+    println!("\nConstraints by Point:");
+    for (point, cs) in order.iter() {
+        println!("{}:", point);
+        for &c in cs {
+            println!(" {}", c);
+        }
+    }
+
     let positions = dist_solve(order)?;
 
+    println!("\nPositions:");
     for (point, pos) in positions.iter() {
         println!("{}: {}", point, pos);
     }

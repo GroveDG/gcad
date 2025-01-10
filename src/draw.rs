@@ -11,7 +11,6 @@ pub fn draw(positions: HashMap<Point, Vector>, dpu: f64) -> Canvas {
     min -= size*0.25;
     max += size*0.25;
     size *= 1.5;
-    println!("{}, {}", min, max);
 
     let mut canvas = Canvas::new(
         (size.x*dpu) as u32,

@@ -18,16 +18,20 @@ fn add_constraints<'a>(
         // for all valid targets of this constraint...
         c.targets(&points).into_iter().filter_map(|t| {
             // Get current number of constraints on target.
-            let l = support.get_vec(t)
-                .map(|v| v.len())
-                .unwrap_or(0);
-            debug_assert!(l <= 2);
-            // Skip those already discrete.
-            if l == 2 { return None; }
+            if support.get_vec(t)
+                .map(|vs| {
+                    vs.iter().any(|&v| {
+                        v == c
+                    })
+                })
+                .unwrap_or(false) {
+                    return None
+                }
             // Add constraint to target.
             support.insert(t, c);
             // If target is now discrete...
-            if l+1 < 2 { return None; }
+            if support.get_vec(t).map(|v| {v.len() != 2})
+                .unwrap_or(true) { return None; }
             // return as known.
             Some(t)
         }).collect::<Vec<&Point>>()
