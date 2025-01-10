@@ -4,7 +4,6 @@ use std::fs;
 use draw::render;
 use draw::SvgRenderer;
 use gsolve::draw::draw;
-use gsolve::math::vector::bounding_box;
 use gsolve::order::bfs_order;
 use gsolve::order::PointIndex;
 use gsolve::parse::parse_document;

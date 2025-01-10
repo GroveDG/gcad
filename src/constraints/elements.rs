@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt::Display, slice};
+use std::{collections::{HashMap, HashSet}, fmt::Display};
 
 use itertools::Itertools;
 
@@ -23,10 +23,10 @@ impl Constraint for Distance {
         return self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<&Point>) -> &[Point] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point> {
         if let Ok(t) = self.points().iter().filter(|&p|{
             !known_points.contains(p)
-        }).exactly_one() { slice::from_ref(t) } else { &[] }
+        }).exactly_one() { vec![t] } else { vec![] }
     }
     
     fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo> {
@@ -56,10 +56,10 @@ impl Constraint for Angle {
         return self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<&Point>) -> &[Point] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point> {
         if let Ok(t) = self.points().iter().filter(|&p|{
             !known_points.contains(p)
-        }).exactly_one() { slice::from_ref(t) } else { &[] }
+        }).exactly_one() { vec![t] } else { vec![] }
     }
     
     fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo> {

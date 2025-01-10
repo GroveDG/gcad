@@ -22,10 +22,14 @@ impl Constraint for Collinear {
         self.points.as_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<&Point>) -> &[String] {
+    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&String> {
         if self.points().iter().filter(|&p|{
             !known_points.contains(p)
-        }).count() >= 2 { self.points.as_slice() } else { &[] }
+        }).count() >= 2 {
+            self.points.iter().filter(|&p| {
+                known_points.contains(p)
+            }).collect()
+        } else { vec![] }
     }
 
     fn to_geo(&self, pos: &HashMap<Point, Vector>, _target_ind: usize) -> Vec<Geo> {
