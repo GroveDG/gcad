@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::repeat,
+};
 
 use itertools::Itertools;
 use multimap::MultiMap;
@@ -71,30 +74,19 @@ fn compute_tree<'a>(
 }
 
 fn root_pairs<'a>(index: &'a PointIndex) -> impl Iterator<Item = (&'a Point, &'a Point)> {
-    let mut neighbors = HashMap::new();
+    let mut neighbors: HashMap<&String, HashSet<&String>> = HashMap::new();
     for p in index.get_points() {
         let known_points = HashSet::from_iter([p]);
-        let targets = index
-            .get_constraints(p)
-            .unwrap()
-            .into_iter()
-            // Get valid targets given only this root.
-            .map(|c| c.targets(&known_points))
-            // Only unique targets.
-            .flatten()
-            .unique()
-            // Exclude pairs already found reversed.
-            .filter(|t| {
-                neighbors
-                    .get(t)
-                    .is_none_or(|n: &Vec<&String>| !n.contains(&p))
-            })
-            .collect::<Vec<&Point>>();
-        neighbors.insert(p, targets);
+        let mut n = HashSet::new();
+        for c in index.get_constraints(p).unwrap() {
+            n.extend(c.targets(&known_points));
+        }
+        n.retain(|t| neighbors.get(t).is_none_or(|n| !n.contains(&p)));
+        neighbors.insert(p, n);
     }
     neighbors
         .into_iter()
-        .map(|(p, targets)| [p].into_iter().cycle().zip(targets.into_iter()))
+        .map(|(p, targets)| repeat(p).zip(targets))
         .flatten()
 }
 
@@ -113,17 +105,14 @@ fn compute_forest(index: &PointIndex) -> Vec<Vec<(&Point, Vec<&dyn Constraint>)>
         }
         // Compute this pair's tree.
         let (order, points) = compute_tree(root, orbiter, &index);
-        // Iterate through trees...
-        forest = forest
-            .into_iter()
-            // and discard any contained by this new tree.
-            .filter(|(_, p)| !points.is_superset(p))
-            .collect();
+        // Discard subtrees.
+        forest.retain(|(_, p)| !points.is_superset(p));
         // Add this new tree.
         forest.push((order, points));
     }
 
-    forest.into_iter().map(|(t, _)| t).collect()
+    let (orders, _): (_, Vec<_>) = forest.into_iter().unzip();
+    orders
 }
 
 pub fn bfs_order(index: &PointIndex) -> Vec<(&Point, Vec<&dyn Constraint>)> {
