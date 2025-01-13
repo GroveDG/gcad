@@ -1,8 +1,6 @@
-use std::{collections::{HashMap, HashSet}, fmt::Display, str::FromStr};
+use std::{collections::{HashMap, HashSet}, fmt::Display};
 
 use itertools::Itertools;
-use lazy_static::lazy_static;
-use regex::Regex;
 
 use crate::{constraints::Constraint, math::{geo::Geo, vector::{AboutEq, Number, Vector}}};
 
@@ -12,21 +10,6 @@ pub type Point = String;
 pub struct Distance {
     pub points: [Point; 2],
     pub dist: Number
-}
-
-impl FromStr for Distance {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*\|\s*(\w+)\s*(\w+)\s*\|\s*$").unwrap();
-        }
-        let captures = RE.captures(s).ok_or(())?;
-        Ok(Self {
-            points: [captures[1].to_string(), captures[2].to_string()],
-            dist: 0.0
-        })
-    }
 }
 
 impl Display for Distance {
@@ -60,21 +43,6 @@ impl Constraint for Distance {
 pub struct Angle {
     pub points: [Point; 3],
     pub measure: Number
-}
-
-impl FromStr for Angle {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*[<∠]\s*(\w+)\s*(\w+)\s*(\w+)\s*$").unwrap();
-        }
-        let captures = RE.captures(s).ok_or(())?;
-        Ok(Self {
-            points: [captures[1].to_string(), captures[2].to_string(), captures[3].to_string()],
-            measure: 0.0
-        })
-    }
 }
 
 impl Display for Angle {

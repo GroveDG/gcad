@@ -1,3 +1,7 @@
+use std::str::FromStr;
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use crate::{
     constraints::{
         constraints::Collinear,
@@ -78,4 +82,52 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
             }
         })
         .collect())
+}
+
+
+impl FromStr for Collinear {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\w+(?:-\w+)+$").unwrap();
+        }
+        if !RE.is_match(s) {
+            return Err(());
+        }
+        let points = s.split("-").map(|s| {
+            s.trim().to_string()
+        }).collect();
+        Ok(Self { points })
+    }
+}
+
+impl FromStr for Distance {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*\|\s*(\w+)\s*(\w+)\s*\|\s*$").unwrap();
+        }
+        let captures = RE.captures(s).ok_or(())?;
+        Ok(Self {
+            points: [captures[1].to_string(), captures[2].to_string()],
+            dist: 0.0
+        })
+    }
+}
+
+impl FromStr for Angle {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*[<∠]\s*(\w+)\s*(\w+)\s*(\w+)\s*$").unwrap();
+        }
+        let captures = RE.captures(s).ok_or(())?;
+        Ok(Self {
+            points: [captures[1].to_string(), captures[2].to_string(), captures[3].to_string()],
+            measure: 0.0
+        })
+    }
 }
