@@ -16,6 +16,7 @@ fn add_constraints<'a>(
     // For all constraints containing this point...
     index
         .get_constraints(point)
+        .unwrap()
         .into_iter()
         .map(|c| {
             // for all valid targets of this constraint...
@@ -96,6 +97,7 @@ pub fn compute_forest(index: &PointIndex) -> Vec<Vec<(Point, Vec<&dyn Constraint
             index
                 // iterate through the root's constraints...
                 .get_constraints(root)
+                .unwrap()
                 .into_iter()
                 // get the points which can be constrained...
                 .map(move |c| c.targets(&known_points))
