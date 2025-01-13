@@ -38,7 +38,7 @@ fn main() -> Result<(), String> {
         }
     }
     
-    let positions = dist_solve(order)?;
+    let positions = brute_solve(order)?;
 
     println!("\n{}", Style::new().underline().paint("Positions"));
     for (point, pos) in positions.iter() {
