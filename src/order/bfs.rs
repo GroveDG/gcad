@@ -13,38 +13,24 @@ fn expand_tree<'a>(
     point: &Point,
     support: &mut MultiMap<&'a Point, &'a dyn Constraint>,
 ) -> Vec<&'a Point> {
-    // For all constraints containing this point...
-    index
-        .get_constraints(point)
-        .unwrap()
-        .into_iter()
-        .map(|c| {
-            // for all valid targets of this constraint...
-            c.targets(&points)
-                .into_iter()
-                .filter_map(|t| {
-                    // See if constraint is already applied.
-                    if support
-                        .get_vec(t)
-                        .map(|vs| vs.iter().any(|&v| v == c))
-                        .unwrap_or(false)
-                    {
-                        return None;
-                    }
-                    // Add constraint to target.
-                    support.insert(t, c);
-                    // If target is now discrete...
-                    if support.get_vec(t).map(|v| v.len() != 2).unwrap_or(true) {
-                        return None;
-                    }
-                    // return as known.
-                    Some(t)
-                })
-                .collect::<Vec<&Point>>()
-        })
-        .flatten()
-        .unique()
-        .collect()
+    let mut new_points = Vec::new();
+    for c in index.get_constraints(point).unwrap() {
+        for t in c.targets(&points) {
+            // See if constraint is already applied.
+            if support.get_vec(t).is_some_and(|cs| cs.iter().contains(&c)) {
+                continue;
+            }
+            // Add constraint to target.
+            support.insert(t, c);
+            // If target is now discrete...
+            if support.get_vec(t).is_none_or(|v| v.len() != 2) {
+                continue;
+            }
+            // return as known.
+            new_points.push(t)
+        }
+    }
+    new_points
 }
 
 fn compute_tree<'a>(
