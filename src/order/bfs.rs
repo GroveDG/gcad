@@ -7,7 +7,7 @@ use crate::constraints::{elements::Point, Constraint};
 
 use super::PointIndex;
 
-fn add_constraints<'a>(
+fn expand_tree<'a>(
     index: &'a PointIndex,
     points: &HashSet<&Point>,
     point: &Point,
@@ -57,7 +57,7 @@ fn compute_tree<'a>(
 ) {
     let mut support = MultiMap::new();
     let mut points: HashSet<&Point> = HashSet::from_iter([root]);
-    add_constraints(index, &points, root, &mut support);
+    expand_tree(index, &points, root, &mut support);
     points.insert(orbiter);
     let mut i = 1;
     let mut order = Vec::from_iter([root, orbiter]);
@@ -69,8 +69,7 @@ fn compute_tree<'a>(
         let point = order[i];
         // Mark as known.
         points.insert(point);
-        let next = add_constraints(index, &points, point, &mut support);
-        for p in next {
+        for p in expand_tree(index, &points, point, &mut support) {
             // Add into order.
             order.push(p);
         }
@@ -102,7 +101,7 @@ fn root_pairs<'a>(index: &'a PointIndex) -> impl Iterator<Item = (&'a Point, &'a
             .filter(|t| {
                 neighbors
                     .get(t)
-                    .is_some_and(|n: &Vec<&String>| n.contains(&p))
+                    .is_none_or(|n: &Vec<&String>| !n.contains(&p))
             })
             .collect::<Vec<&Point>>();
         neighbors.insert(p, targets);
