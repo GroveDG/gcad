@@ -1,6 +1,8 @@
 use crate::{
     constraints::{
-        constraints::Collinear, elements::{Angle, Distance}, Constraint
+        constraints::Collinear,
+        elements::{Angle, Distance},
+        Constraint,
     },
     math::vector::Number,
 };
@@ -39,7 +41,7 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
         return Err("equality does not contain equals sign".to_string());
     }
     let mut value = None;
-    let mut elements: Vec<Element> = vec![];
+    let mut elements: Vec<Element> = Vec::new();
     for expr in line.split("=") {
         if let Ok(parsed) = expr.parse::<Distance>() {
             elements.push(Element::D(parsed));
@@ -75,5 +77,5 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
                 }
             }
         })
-        .collect::<Vec<Box<dyn Constraint>>>())
+        .collect())
 }
