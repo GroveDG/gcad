@@ -3,9 +3,6 @@ use std::{
     iter::repeat,
 };
 
-use itertools::Itertools;
-use multimap::MultiMap;
-
 use crate::constraints::{elements::Point, Constraint};
 
 use super::PointIndex;
@@ -14,19 +11,23 @@ fn expand_tree<'a>(
     index: &'a PointIndex,
     points: &HashSet<&Point>,
     point: &Point,
-    support: &mut MultiMap<&'a Point, &'a dyn Constraint>,
+    support: &mut HashMap<&'a Point, Vec<&'a dyn Constraint>>,
 ) -> Vec<&'a Point> {
     let mut new_points = Vec::new();
     for c in index.get_constraints(point).unwrap() {
         for t in c.targets(&points) {
+            if !support.contains_key(t) {
+                support.insert(t, Vec::new());
+            }
             // See if constraint is already applied.
-            if support.get_vec(t).is_some_and(|cs| cs.iter().contains(&c)) {
+            let s_v = support.get_mut(t).unwrap();
+            if s_v.contains(&c) {
                 continue;
             }
             // Add constraint to target.
-            support.insert(t, c);
+            s_v.push(c);
             // If target is now discrete...
-            if support.get_vec(t).is_none_or(|v| v.len() != 2) {
+            if s_v.len() != 2 {
                 continue;
             }
             // return as known.
@@ -44,16 +45,14 @@ fn compute_tree<'a>(
     Vec<(&'a Point, Vec<&'a dyn Constraint>)>,
     HashSet<&'a Point>,
 ) {
-    let mut support = MultiMap::new();
+    let mut support = HashMap::new();
     let mut points: HashSet<&Point> = HashSet::from_iter([root]);
+
     expand_tree(index, &points, root, &mut support);
     points.insert(orbiter);
+
     let mut i = 1;
     let mut order = Vec::from_iter([root, orbiter]);
-    // Supporting constraints.
-    // Any constraints which can be applied to a point for a given set of
-    // previous points.
-    // If any point has 2 or more constraints it is assumed to be discrete.
     while i < order.len() {
         let point = order[i];
         // Mark as known.
