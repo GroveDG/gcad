@@ -32,7 +32,7 @@ impl PointIndex {
         }
     }
 
-    pub(crate) fn get_constraints(&self, point: &Point) -> Option<Vec<&dyn Constraint>> {
+    pub fn get_constraints(&self, point: &Point) -> Option<Vec<&dyn Constraint>> {
         self.map.get(point).map(|indices| {
             indices
                 .into_iter()
@@ -41,7 +41,7 @@ impl PointIndex {
         })
     }
 
-    pub(crate) fn get_points(&self) -> Vec<&Point> {
+    pub fn get_points(&self) -> Vec<&Point> {
         self.map.keys().collect()
     }
 }
