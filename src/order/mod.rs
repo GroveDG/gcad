@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::constraints::{elements::Point, Constraint};
 
-mod bfs_order;
-pub use bfs_order::bfs_order;
+mod bfs;
+pub use bfs::bfs_order;
 
 pub struct PointIndex {
     map: HashMap<Point, Vec<usize>>,

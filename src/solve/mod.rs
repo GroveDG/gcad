@@ -1,4 +1,4 @@
-mod dist_solve;
-mod brute_solve;
-pub use dist_solve::dist_solve;
-pub use brute_solve::brute_solve;
+mod dist;
+mod brute;
+pub use dist::dist_solve;
+pub use brute::brute_solve;
