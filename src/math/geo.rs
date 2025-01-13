@@ -27,10 +27,10 @@ pub fn along_linear(o: Vector, v: Vector, t: Number) -> Vector {
     o + v * t
 }
 
-pub fn meet(g0: &[Geo], g1: &[Geo]) -> Vec<Geo> {
+pub fn meet(g0: Vec<Geo>, g1: Vec<Geo>) -> Vec<Geo> {
     g0.iter()
         .cartesian_product(g1)
-        .map(|(g0, g1)| intersect(*g0, *g1))
+        .map(|(&g0, g1)| intersect(g0, g1))
         .concat()
 }
 

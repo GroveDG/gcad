@@ -8,7 +8,8 @@ use gsolve::draw::draw;
 use gsolve::order::bfs_order;
 use gsolve::order::PointIndex;
 use gsolve::parse::parse_document;
-use gsolve::solve::dist_solve::dist_solve;
+use gsolve::solve::brute_solve;
+use gsolve::solve::dist_solve;
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
@@ -36,7 +37,7 @@ fn main() -> Result<(), String> {
             println!(" {}", c);
         }
     }
-
+    
     let positions = dist_solve(order)?;
 
     println!("\n{}", Style::new().underline().paint("Positions"));
