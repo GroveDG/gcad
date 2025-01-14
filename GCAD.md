@@ -13,18 +13,12 @@ GCAD defines two dialects: proper (Unicode) and improper (ASCII).
 
 # Reference
 ```
-╔═══════════════╦════════════╦═════════════╗
-║               ║ Proper     ║ Improper    ║
-╠═══════════════╬════════════╬═════════════╣
-║ Distance      ║ |A B| = 1  ║ ░░░░░░░░░░░ ║
-╠═══════════════╬════════════╬═════════════╣
-║ Angle         ║ ∠A B C = 1 ║ <A B C = 1  ║
-╠═══════════════╬════════════╬═════════════╣
-║ Parallel      ║ A B ∥ C D  ║ A B || C D  ║
-╠═══════════════╬════════════╬═════════════╣
-║ Perpendicular ║ A B ⟂ C D  ║ A B _|_ C D ║
-╠═══════════════╬════════════╬═════════════╣
-║ Collinear     ║ A-B-C      ║ ░░░░░░░░░░░ ║
-╚═══════════════╩════════════╩═════════════╝
+                  Proper        Improper     
+ ═══════════════════════════════════════════ 
+  Distance      ⋮ |A B| = 1  ⋮              
+  Angle         ⋮ ∠A B C = 1 ⋮  <A B C = 1   
+  Parallel      ⋮ A B ∥ C D  ⋮  A B || C D   
+  Perpendicular ⋮ A B ⟂ C D  ⋮  A B _|_ C D  
+  Collinear     ⋮ A-B-C      ⋮              
 ```
 
