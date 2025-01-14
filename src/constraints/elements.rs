@@ -64,10 +64,8 @@ impl Constraint for Angle {
     
     fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo> {
         if target_ind == 1 {
-            let start = &self.points[0];
-            let end = &self.points[2];
-            let s = pos[start];
-            let e = pos[end];
+            let s = pos[&self.points[0]];
+            let e = pos[&self.points[2]];
             let (v, d) = (e-s).unit_mag();
             debug_assert_ne!(d, 0.0);
             let r = (d/2.0)/Number::sin(self.measure);
@@ -86,10 +84,8 @@ impl Constraint for Angle {
             }
         } else {
             let i = if target_ind == 2 {0} else {2};
-            let origin = &self.points[1];
-            let base = &self.points[i];
-            let o = pos[origin];
-            let b = pos[base];
+            let o = pos[&self.points[1]];
+            let b = pos[&self.points[i]];
             let b_v = (b-o).unit();
             let p = b_v.rot(self.measure);
             let n = b_v.rot(-self.measure);
