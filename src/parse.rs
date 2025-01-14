@@ -20,7 +20,11 @@ pub fn parse_document(doc: String) -> Result<Vec<Box<dyn Constraint>>, String> {
     Ok(exprs)
 }
 
-pub fn parse_line(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_line(mut line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
+    line = line.trim();
+    if line.is_empty() {
+        return Ok(Vec::new());
+    }
     if let Ok(parsed) = parse_equality(line) {
         return Ok(parsed);
     }

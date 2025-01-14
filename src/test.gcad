@@ -1,4 +1,8 @@
 <T L R = <T R L = 1.2
 |L R| = 1
+
 L-R-M
 |L M| = |M R| = 0.5
+
+<T L LL = <T R RR = 1.57
+|L LL| = |R RR| = 0.1
