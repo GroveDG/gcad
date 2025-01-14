@@ -12,6 +12,7 @@ GCAD defines two dialects: proper (Unicode) and improper (ASCII).
  - Improper GCAD uses approximate symbols constructed of ASCII for type-ability.
 
 # Reference
+```
 ╔═══════════════╦════════════╦═════════════╗
 ║               ║ Proper     ║ Improper    ║
 ╠═══════════════╬════════════╬═════════════╣
@@ -25,4 +26,5 @@ GCAD defines two dialects: proper (Unicode) and improper (ASCII).
 ╠═══════════════╬════════════╬═════════════╣
 ║ Collinear     ║ A-B-C      ║             ║
 ╚═══════════════╩════════════╩═════════════╝
+```
 
