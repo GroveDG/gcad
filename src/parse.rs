@@ -1,10 +1,11 @@
-use std::str::FromStr;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::str::FromStr;
 
 use crate::{
     constraints::{
-        constraints::Collinear,
+        constraints::{Collinear, Parallel},
         elements::{Angle, Distance},
         Constraint,
     },
@@ -84,24 +85,6 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
         .collect())
 }
 
-
-impl FromStr for Collinear {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\w+(?:-\w+)+$").unwrap();
-        }
-        if !RE.is_match(s) {
-            return Err(());
-        }
-        let points = s.split("-").map(|s| {
-            s.trim().to_string()
-        }).collect();
-        Ok(Self { points })
-    }
-}
-
 impl FromStr for Distance {
     type Err = ();
 
@@ -112,7 +95,7 @@ impl FromStr for Distance {
         let captures = RE.captures(s).ok_or(())?;
         Ok(Self {
             points: [captures[1].to_string(), captures[2].to_string()],
-            dist: 0.0
+            dist: 0.0,
         })
     }
 }
@@ -126,8 +109,55 @@ impl FromStr for Angle {
         }
         let captures = RE.captures(s).ok_or(())?;
         Ok(Self {
-            points: [captures[1].to_string(), captures[2].to_string(), captures[3].to_string()],
-            measure: 0.0
+            points: [
+                captures[1].to_string(),
+                captures[2].to_string(),
+                captures[3].to_string(),
+            ],
+            measure: 0.0,
         })
+    }
+}
+
+impl FromStr for Collinear {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\w+(?:\s*-\s*\w+)+$").unwrap();
+        }
+        if !RE.is_match(s) {
+            return Err(());
+        }
+        let points = s.split("-").map(|s| s.trim().to_string()).collect();
+        Ok(Self { points })
+    }
+}
+
+impl FromStr for Parallel {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex =
+                Regex::new(r"^(\w+\s*\w+)(?:\s*(∥|(\|\|))\s*(\w+\s*\w+))+$").unwrap();
+            static ref SPLIT: Regex = Regex::new(r"∥|(\|\|)").unwrap();
+            static ref LINE: Regex = Regex::new(r"\s*(\w+)\s*(\w+)\s*").unwrap();
+        }
+        if !RE.is_match(s) {
+            return Err(());
+        }
+        let lines = SPLIT
+            .split(s)
+            .map(|l| {
+                LINE.captures(l)
+                    .unwrap()
+                    .iter()
+                    .map(|m| m.unwrap().as_str().to_string())
+                    .next_array()
+                    .unwrap()
+            })
+            .collect();
+        Ok(Self { lines })
     }
 }

@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    f64::NEG_INFINITY,
     fmt::Display,
 };
 
@@ -8,14 +7,14 @@ use itertools::Itertools;
 
 use crate::math::{
     geo::{line_from_points, Geo},
-    vector::Vector,
+    vector::{Number, Vector},
 };
 
 use super::{elements::Point, Constraint};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Collinear {
-    pub points: Vec<String>,
+    pub points: Vec<Point>,
 }
 
 impl Display for Collinear {
@@ -25,8 +24,8 @@ impl Display for Collinear {
 }
 
 impl Constraint for Collinear {
-    fn points(&self) -> &[Point] {
-        self.points.as_slice()
+    fn points(&self) -> Vec<&Point> {
+        self.points.iter().collect()
     }
 
     fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&String> {
@@ -47,15 +46,87 @@ impl Constraint for Collinear {
     }
 
     fn to_geo(&self, pos: &HashMap<Point, Vector>, _target_ind: usize) -> Vec<Geo> {
-        if let Some([p0, p1]) = self
+        let [p0, p1] = self
             .points
             .iter()
             .filter(|&p| pos.contains_key(p))
             .next_array()
+            .unwrap();
+        vec![line_from_points(pos[p0], pos[p1], Number::NEG_INFINITY)]
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct Parallel {
+    pub lines: Vec<[Point; 2]>,
+}
+
+impl Display for Parallel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.lines
+                .iter()
+                .map(|[p0, p1]| format!("{} {}", p0, p1))
+                .join(" ∥ ")
+        )
+    }
+}
+
+impl Constraint for Parallel {
+    fn points(&self) -> Vec<&Point> {
+        self.lines.iter().flatten().collect()
+    }
+
+    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&String> {
+        if let Some(_) = self
+            .lines
+            .iter()
+            .filter(|&l| known_points.contains(&l[0]) && known_points.contains(&l[1]))
+            .next()
         {
-            vec![line_from_points(pos[p0], pos[p1], NEG_INFINITY)]
+            self.lines
+                .iter()
+                .filter_map(|l| {
+                    if !known_points.contains(&l[0]) && known_points.contains(&l[1]) {
+                        Some(&l[0])
+                    } else if !known_points.contains(&l[1]) && known_points.contains(&l[0]) {
+                        Some(&l[1])
+                    } else {
+                        None
+                    }
+                })
+                .collect()
         } else {
             vec![]
         }
+    }
+
+    fn to_geo(&self, pos: &HashMap<Point, Vector>, _target_ind: usize) -> Vec<Geo> {
+        let l = self
+            .lines
+            .iter()
+            .filter(|&l| pos.contains_key(&l[0]) && pos.contains_key(&l[1]))
+            .next()
+            .unwrap();
+        let v = (pos[&l[1]] - pos[&l[0]]).unit();
+        self.lines
+            .iter()
+            .filter_map(|l| {
+                if !pos.contains_key(&l[0]) && pos.contains_key(&l[1]) {
+                    Some(&l[0])
+                } else if !pos.contains_key(&l[1]) && pos.contains_key(&l[0]) {
+                    Some(&l[1])
+                } else {
+                    None
+                }
+            })
+            .map(|p| Geo::Linear {
+                o: pos[p],
+                v,
+                l: Number::NEG_INFINITY,
+            })
+            .collect()
     }
 }

@@ -12,7 +12,7 @@ pub mod elements;
 pub mod constraints;
 
 pub trait Constraint: Debug + Display {
-    fn points(&self) -> &[Point];
+    fn points(&self) -> Vec<&Point>;
     fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point>;
     fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo>;
 }

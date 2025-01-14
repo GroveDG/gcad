@@ -72,7 +72,7 @@ fn solve_iter(
     for g in gs {
         positions.insert((*point).clone(), choose(g));
         for (c, t) in cs.iter() {
-            let i = c.points().iter().position(|v| v == *point).unwrap();
+            let i = c.points().iter().position(|v| v == point).unwrap();
             let c_g = c.to_geo(&positions, i);
             geo.get_mut(*t).unwrap().push(c_g);
         }

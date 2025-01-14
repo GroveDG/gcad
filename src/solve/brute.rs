@@ -18,7 +18,7 @@ fn solve_iter(
     };
     let mut geo = vec![Geo::All];
     for &c in cs {
-        let i = c.points().iter().position(|v| v == *point).unwrap();
+        let i = c.points().iter().position(|v| v == point).unwrap();
         let c_geo = c.to_geo(&positions, i);
         geo = meet(geo, c_geo);
     }
