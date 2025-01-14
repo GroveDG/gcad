@@ -12,11 +12,17 @@ GCAD defines two dialects: proper (Unicode) and improper (ASCII).
  - Improper GCAD uses approximate symbols constructed of ASCII for type-ability.
 
 # Reference
-|               | Proper       | Improper      |
-|---------------|--------------|---------------|
-| Distance      | <code>`|A B| = 1`</code>  |               |
-| Angle         | <code>`∠A B C = 1`</code> | <code>`<A B C = 1`</code>  |
-| Parallel      | <code>`A B ∥ C D`</code>  | <code>`A B || C D`</code>  |
-| Perpendicular | <code>`A B ⟂ C D`</code>  | <code>`A B _|_ C D`</code> |
-| Collinear     | <code>`A-B-C`</code>      |               |
+╔═══════════════╦════════════╦═════════════╗
+║               ║ Proper     ║ Improper    ║
+╠═══════════════╬════════════╬═════════════╣
+║ Distance      ║ |A B| = 1  ║             ║
+╠═══════════════╬════════════╬═════════════╣
+║ Angle         ║ ∠A B C = 1 ║ <A B C = 1  ║
+╠═══════════════╬════════════╬═════════════╣
+║ Parallel      ║ A B ∥ C D  ║ A B || C D  ║
+╠═══════════════╬════════════╬═════════════╣
+║ Perpendicular ║ A B ⟂ C D  ║ A B _|_ C D ║
+╠═══════════════╬════════════╬═════════════╣
+║ Collinear     ║ A-B-C      ║             ║
+╚═══════════════╩════════════╩═════════════╝
 
