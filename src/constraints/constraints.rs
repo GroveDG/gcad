@@ -33,13 +33,13 @@ impl Constraint for Collinear {
         if self
             .points()
             .iter()
-            .filter(|&p| !known_points.contains(p))
+            .filter(|&p| known_points.contains(p))
             .count()
             >= 2
         {
             self.points
                 .iter()
-                .filter(|&p| known_points.contains(p))
+                .filter(|&p| !known_points.contains(p))
                 .collect()
         } else {
             vec![]
@@ -50,7 +50,7 @@ impl Constraint for Collinear {
         if let Some([p0, p1]) = self
             .points
             .iter()
-            .filter(|&p| !pos.contains_key(p))
+            .filter(|&p| pos.contains_key(p))
             .next_array()
         {
             vec![line_from_points(pos[p0], pos[p1], NEG_INFINITY)]
