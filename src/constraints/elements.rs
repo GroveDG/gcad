@@ -25,7 +25,7 @@ impl Display for Distance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "| {} {} | = {}",
+            "|{} {}| = {}",
             self.points[0], self.points[1], self.dist
         )
     }
@@ -49,8 +49,8 @@ impl Constraint for Distance {
         }
     }
 
-    fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo> {
-        let i: usize = if target_ind == 1 { 0 } else { 1 };
+    fn to_geo(&self, pos: &HashMap<Point, Vector>, t_ind: usize) -> Vec<Geo> {
+        let i: usize = if t_ind == 1 { 0 } else { 1 };
         vec![Geo::Circle {
             c: pos[&self.points[i]],
             r: self.dist,
@@ -92,8 +92,8 @@ impl Constraint for Angle {
         }
     }
 
-    fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo> {
-        if target_ind == 1 {
+    fn to_geo(&self, pos: &HashMap<Point, Vector>, t_ind: usize) -> Vec<Geo> {
+        if t_ind == 1 {
             let s = pos[&self.points[0]];
             let e = pos[&self.points[2]];
             let (v, d) = (e - s).unit_mag();
@@ -111,7 +111,7 @@ impl Constraint for Angle {
                 ]
             }
         } else {
-            let i = if target_ind == 2 { 0 } else { 2 };
+            let i = if t_ind == 2 { 0 } else { 2 };
             let o = pos[&self.points[1]];
             let b = pos[&self.points[i]];
             let b_v = (b - o).unit();

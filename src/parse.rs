@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use crate::{
     constraints::{
-        constraints::{Collinear, Parallel},
+        constraints::{Collinear, Parallel, Perpendicular},
         elements::{Angle, Distance},
         Constraint,
     },
@@ -35,6 +35,12 @@ pub fn parse_line(mut line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
 }
 
 pub fn parse_constraint(line: &str) -> Result<Box<dyn Constraint>, String> {
+    if let Ok(parsed) = line.parse::<Parallel>() {
+        return Ok(Box::new(parsed));
+    }
+    if let Ok(parsed) = line.parse::<Perpendicular>() {
+        return Ok(Box::new(parsed));
+    }
     if let Ok(parsed) = line.parse::<Collinear>() {
         return Ok(Box::new(parsed));
     }
@@ -157,6 +163,37 @@ impl FromStr for Parallel {
                 LINE.captures(l)
                     .unwrap()
                     .iter()
+                    .skip(1)
+                    .map(|m| m.unwrap().as_str().to_string())
+                    .next_array()
+                    .unwrap()
+            })
+            .collect();
+        Ok(Self { lines })
+    }
+}
+
+
+impl FromStr for Perpendicular {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        lazy_static! {
+            static ref RE: Regex =
+                Regex::new(r"^(\w+\s*\w+)(?:\s*(⟂|(_\|_))\s*(\w+\s*\w+))+$").unwrap();
+            static ref SPLIT: Regex = Regex::new(r"⟂|(_\|_)").unwrap();
+            static ref LINE: Regex = Regex::new(r"\s*(\w+)\s*(\w+)\s*").unwrap();
+        }
+        if !RE.is_match(s) {
+            return Err(());
+        }
+        let lines = SPLIT
+            .split(s)
+            .map(|l| {
+                LINE.captures(l)
+                    .unwrap()
+                    .iter()
+                    .skip(1)
                     .map(|m| m.unwrap().as_str().to_string())
                     .next_array()
                     .unwrap()

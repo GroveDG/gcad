@@ -4,5 +4,6 @@
 L-R-M
 |L M| = |M R| = 0.5
 
-<T L LL = <T R RR = 1.57
-|L LL| = |R RR| = 0.1
+L LL ⟂ L T
+R RR ⟂ R T
+|LL L| = |R RR| = 0.1

@@ -14,7 +14,7 @@ pub mod constraints;
 pub trait Constraint: Debug + Display {
     fn points(&self) -> Vec<&Point>;
     fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point>;
-    fn to_geo(&self, pos: &HashMap<Point, Vector>, target_ind: usize) -> Vec<Geo>;
+    fn to_geo(&self, pos: &HashMap<Point, Vector>, t_ind: usize) -> Vec<Geo>;
 }
 
 // Only works if refrencing the same instance exactly.
