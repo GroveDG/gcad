@@ -1,43 +1,63 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fmt::Display,
 };
 
 use itertools::Itertools;
+use regex::Regex;
 
 use crate::{
     constraints::Constraint,
     math::{
-        geo::Geo,
+        geo::{Dimension, Geo},
         vector::{AboutEq, Number, Vector},
     },
+    order::{PointID, PointIndex},
 };
 
 pub type Point = String;
 
 #[derive(Debug)]
 pub struct Distance {
-    pub points: [Point; 2],
+    pub points: [PointID; 2],
     pub dist: Number,
 }
 
 impl Display for Distance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "|{} {}| = {}",
-            self.points[0], self.points[1], self.dist
-        )
+        write!(f, "|{} {}| = {}", self.points[0], self.points[1], self.dist)
     }
 }
 
 impl Constraint for Distance {
-    fn points(&self) -> Vec<&Point> {
-        return self.points.iter().collect();
+    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
+        lazy_static::lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*\|\s*(\w+)\s*(\w+)\s*\|\s*$").unwrap();
+        }
+        let captures = RE.captures(s).ok_or(())?;
+        Ok(Self {
+            points: [
+                index.get_or_insert(&captures[1]),
+                index.get_or_insert(&captures[2]),
+            ],
+            dist: 0.0,
+        })
     }
 
-    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point> {
-        if let Ok(t) = self
+    fn dim(&self) -> Dimension {
+        Dimension::One
+    }
+
+    fn points(&self) -> &[PointID] {
+        self.points.as_slice()
+    }
+
+    fn points_mut(&mut self) -> &mut [PointID] {
+        self.points.as_mut_slice()
+    }
+
+    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
+        if let Ok(&t) = self
             .points
             .iter()
             .filter(|&p| !known_points.contains(p))
@@ -49,10 +69,10 @@ impl Constraint for Distance {
         }
     }
 
-    fn to_geo(&self, pos: &HashMap<Point, Vector>, t_ind: usize) -> Vec<Geo> {
+    fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
         let i: usize = if t_ind == 1 { 0 } else { 1 };
         vec![Geo::Circle {
-            c: pos[&self.points[i]],
+            c: pos[self.points[i]],
             r: self.dist,
         }]
     }
@@ -60,7 +80,7 @@ impl Constraint for Distance {
 
 #[derive(Debug)]
 pub struct Angle {
-    pub points: [Point; 3],
+    pub points: [PointID; 3],
     pub measure: Number,
 }
 
@@ -75,13 +95,36 @@ impl Display for Angle {
 }
 
 impl Constraint for Angle {
-    fn points(&self) -> Vec<&Point> {
-        return self.points.iter().collect();
+    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
+        lazy_static::lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*[<∠]\s*(\w+)\s*(\w+)\s*(\w+)\s*$").unwrap();
+        }
+        let captures = RE.captures(s).ok_or(())?;
+        Ok(Self {
+            points: [
+                index.get_or_insert(&captures[1]),
+                index.get_or_insert(&captures[2]),
+                index.get_or_insert(&captures[3]),
+            ],
+            measure: 0.0,
+        })
     }
 
-    fn targets(&self, known_points: &HashSet<&Point>) -> Vec<&Point> {
-        if let Ok(t) = self
-            .points()
+    fn dim(&self) -> Dimension {
+        Dimension::One
+    }
+
+    fn points(&self) -> &[PointID] {
+        self.points.as_slice()
+    }
+    
+    fn points_mut(&mut self) -> &mut [PointID] {
+        self.points.as_mut_slice()
+    }
+
+    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
+        if let Ok(&t) = self
+            .points
             .iter()
             .filter(|&p| !known_points.contains(p))
             .exactly_one()
@@ -92,10 +135,10 @@ impl Constraint for Angle {
         }
     }
 
-    fn to_geo(&self, pos: &HashMap<Point, Vector>, t_ind: usize) -> Vec<Geo> {
+    fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
         if t_ind == 1 {
-            let s = pos[&self.points[0]];
-            let e = pos[&self.points[2]];
+            let s = pos[self.points[0]];
+            let e = pos[self.points[2]];
             let (v, d) = (e - s).unit_mag();
             debug_assert_ne!(d, 0.0);
             let r = d / 2.0 / self.measure.sin();
@@ -112,8 +155,8 @@ impl Constraint for Angle {
             }
         } else {
             let i = if t_ind == 2 { 0 } else { 2 };
-            let o = pos[&self.points[1]];
-            let b = pos[&self.points[i]];
+            let o = pos[self.points[1]];
+            let b = pos[self.points[i]];
             let b_v = (b - o).unit();
             vec![
                 Geo::Linear {

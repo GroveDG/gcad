@@ -4,44 +4,69 @@ use crate::constraints::{elements::Point, Constraint};
 
 mod bfs;
 pub use bfs::bfs_order;
+use bimap::BiHashMap;
 
+pub type PointID = usize;
+pub type CID = usize;
+
+#[derive(Debug, Default)]
 pub struct PointIndex {
-    map: HashMap<Point, Vec<usize>>,
+    id2p: BiHashMap<PointID, Point>,
+    id2c: HashMap<PointID, Vec<CID>>,
     constraints: Vec<Box<dyn Constraint>>,
 }
 
 impl PointIndex {
-    pub fn from_constraints(constraints: Vec<Box<dyn Constraint>>) -> Self {
-        let mut index = PointIndex {
-            map: HashMap::new(),
-            constraints,
-        };
-        for (i, c) in index.constraints.iter().enumerate() {
-            for p in c.points() {
-                Self::insert(&mut index.map, p, i);
-            }
-        }
-        index
-    }
-
-    fn insert(map: &mut HashMap<Point, Vec<usize>>, p: &Point, i: usize) {
-        if map.contains_key(p) {
-            map.get_mut(p).unwrap().push(i);
-        } else {
-            map.insert(p.clone(), vec![i]);
-        }
-    }
-
-    pub fn get_constraints(&self, point: &Point) -> Option<Vec<&dyn Constraint>> {
-        self.map.get(point).map(|indices| {
-            indices
-                .into_iter()
-                .map(|&i| self.constraints[i].as_ref())
-                .collect()
+    pub fn get_or_insert(&mut self, p: &str) -> PointID {
+        self.id2p.get_by_right(p).copied().unwrap_or_else(|| {
+            let id = self.id2p.len();
+            self.id2c.insert(id, Vec::new());
+            self.id2p.insert(id, p.to_owned());
+            id
         })
     }
 
-    pub fn get_points(&self) -> Vec<&Point> {
-        self.map.keys().collect()
+    pub fn add_constraint(&mut self, c: Box<dyn Constraint>) {
+        let cid = self.constraints.len();
+        for id in c.points() {
+            self.id2c.get_mut(id).unwrap().push(cid);
+        }
+        self.constraints.push(c);
+    }
+
+    pub fn constraints(&self) -> &[Box<dyn Constraint>] {
+        &self.constraints
+    }
+
+    pub fn get_constraint(&self, cid: CID) -> &dyn Constraint {
+        self.constraints[cid].as_ref()
+    }
+
+    pub fn get_cids(&self, point: &PointID) -> &Vec<CID> {
+        &self.id2c[point]
+    }
+
+    pub fn ids(&self) -> impl Iterator<Item = &PointID> {
+        self.id2p.left_values()
+    }
+
+    pub fn get_point(&self, id: &PointID) -> &Point {
+        self.id2p.get_by_left(id).unwrap()
+    }
+
+    pub fn map_ids(&mut self, mapping: &HashMap<PointID, usize>) {
+        for c in self.constraints.iter_mut() {
+            for p in c.as_mut().points_mut() {
+                *p = mapping[p];
+            }
+        }
+        let mut id2c = std::mem::take(&mut self.id2c);
+        let mut id2p = std::mem::take(&mut self.id2p);
+        for (p, q) in mapping {
+            let v = id2c.remove(p).unwrap();
+            self.id2c.insert(*q, v);
+            let (_, r) = id2p.remove_by_left(p).unwrap();
+            self.id2p.insert(*q, r);
+        }
     }
 }

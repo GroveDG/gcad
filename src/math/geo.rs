@@ -2,6 +2,13 @@ use crate::math::vector::{AboutEq, Number, Vector};
 use itertools::Itertools;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Dimension {
+    Zero = 0,
+    One = 1,
+    Two = 2
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Geo {
     Point { p: Vector },
     Linear { o: Vector, v: Vector, l: Number },

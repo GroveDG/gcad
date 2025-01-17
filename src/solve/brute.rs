@@ -1,30 +1,36 @@
 use std::collections::HashMap;
 
 use crate::{
-    constraints::{elements::Point, Constraint},
+    constraints::elements::Point,
     math::{
         geo::{choose, meet, Geo},
         vector::Vector,
     },
+    order::{PointIndex, CID},
+    util::locate,
 };
 
 fn solve_iter(
-    order: &Vec<(&Point, Vec<&dyn Constraint>)>,
-    positions: &mut HashMap<Point, Vector>,
+    order: &Vec<Vec<CID>>,
+    index: &mut PointIndex,
+    positions: &mut Vec<Vector>,
     i: usize,
 ) -> Result<(), ()> {
-    let Some((point, cs)) = order.get(i) else {
+    if order.len() <= i {
         return Ok(());
     };
-    let mut geo = vec![Geo::All];
-    for &c in cs {
-        let i = c.points().iter().position(|v| v == point).unwrap();
-        let c_geo = c.to_geo(&positions, i);
-        geo = meet(geo, c_geo);
-    }
+    let geo = order[i]
+        .iter()
+        .map(|&cid| {
+            let c = index.get_constraint(cid);
+            let t_ind = locate(c.points(), &i).unwrap();
+            c.geo(&positions[..i], t_ind)
+        })
+        .reduce(meet)
+        .unwrap_or_else(|| vec![Geo::All]);
     for g in geo {
-        positions.insert((*point).clone(), choose(g));
-        if solve_iter(order, positions, i + 1).is_ok() {
+        positions[i] = choose(g);
+        if solve_iter(order, index, positions, i + 1).is_ok() {
             return Ok(());
         }
     }
@@ -32,11 +38,17 @@ fn solve_iter(
 }
 
 pub fn brute_solve(
-    order: Vec<(&Point, Vec<&dyn Constraint>)>,
+    index: &mut PointIndex,
+    order: Vec<Vec<CID>>,
 ) -> Result<HashMap<Point, Vector>, String> {
-    let mut positions = HashMap::new();
-    if solve_iter(&order, &mut positions, 0).is_ok() {
-        Ok(positions)
+    let mut positions = vec![Vector::ZERO; order.len()];
+    if solve_iter(&order, index, &mut positions, 0).is_ok() {
+        Ok(HashMap::from_iter(
+            positions
+                .into_iter()
+                .enumerate()
+                .map(|(id, v)| (index.get_point(&id).clone(), v)),
+        ))
     } else {
         Err("solve failed".to_string())
     }

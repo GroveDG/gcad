@@ -1,53 +1,50 @@
-use itertools::Itertools;
-use lazy_static::lazy_static;
-use regex::Regex;
-use std::str::FromStr;
-
 use crate::{
     constraints::{
         constraints::{Collinear, Parallel, Perpendicular},
         elements::{Angle, Distance},
         Constraint,
     },
-    math::vector::Number,
+    math::vector::Number, order::PointIndex,
 };
 
-pub fn parse_document(doc: String) -> Result<Vec<Box<dyn Constraint>>, String> {
-    let mut exprs = vec![];
+pub fn parse_document(doc: String) -> Result<PointIndex, String> {
+    let mut index = PointIndex::default();
     for line in doc.lines() {
-        exprs.append(&mut parse_line(line)?);
+        for c in parse_line(line, &mut index)? {
+            index.add_constraint(c);
+        }
     }
-    Ok(exprs)
+    Ok(index)
 }
 
-pub fn parse_line(mut line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
     line = line.trim();
     if line.is_empty() {
         return Ok(Vec::new());
     }
-    if let Ok(parsed) = parse_equality(line) {
+    if let Ok(parsed) = parse_equality(line, index) {
         return Ok(parsed);
     }
-    if let Ok(parsed) = parse_constraint(line) {
+    if let Ok(parsed) = parse_constraint(line, index) {
         return Ok(vec![parsed]);
     }
     Err(format!("failed to parse line: {line}"))
 }
 
-pub fn parse_constraint(line: &str) -> Result<Box<dyn Constraint>, String> {
-    if let Ok(parsed) = line.parse::<Parallel>() {
+pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Box<dyn Constraint>, String> {
+    if let Ok(parsed) = Parallel::parse(line, index) {
         return Ok(Box::new(parsed));
     }
-    if let Ok(parsed) = line.parse::<Perpendicular>() {
+    if let Ok(parsed) = Perpendicular::parse(line, index) {
         return Ok(Box::new(parsed));
     }
-    if let Ok(parsed) = line.parse::<Collinear>() {
+    if let Ok(parsed) = Collinear::parse(line, index) {
         return Ok(Box::new(parsed));
     }
     Err(format!("failed to parse constraint {line}"))
 }
 
-pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_equality(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
     enum Element {
         D(Distance),
         A(Angle),
@@ -58,11 +55,11 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
     let mut value = None;
     let mut elements: Vec<Element> = Vec::new();
     for expr in line.split("=") {
-        if let Ok(parsed) = expr.parse::<Distance>() {
+        if let Ok(parsed) = Distance::parse(expr, index) {
             elements.push(Element::D(parsed));
             continue;
         }
-        if let Ok(parsed) = expr.parse::<Angle>() {
+        if let Ok(parsed) = Angle::parse(expr, index) {
             elements.push(Element::A(parsed));
             continue;
         }
@@ -93,112 +90,4 @@ pub fn parse_equality(line: &str) -> Result<Vec<Box<dyn Constraint>>, String> {
             }
         })
         .collect())
-}
-
-impl FromStr for Distance {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*\|\s*(\w+)\s*(\w+)\s*\|\s*$").unwrap();
-        }
-        let captures = RE.captures(s).ok_or(())?;
-        Ok(Self {
-            points: [captures[1].to_string(), captures[2].to_string()],
-            dist: 0.0,
-        })
-    }
-}
-
-impl FromStr for Angle {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*[<∠]\s*(\w+)\s*(\w+)\s*(\w+)\s*$").unwrap();
-        }
-        let captures = RE.captures(s).ok_or(())?;
-        Ok(Self {
-            points: [
-                captures[1].to_string(),
-                captures[2].to_string(),
-                captures[3].to_string(),
-            ],
-            measure: 0.0,
-        })
-    }
-}
-
-impl FromStr for Collinear {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\w+(?:\s*-\s*\w+)+$").unwrap();
-        }
-        if !RE.is_match(s) {
-            return Err(());
-        }
-        let points = s.split("-").map(|s| s.trim().to_string()).collect();
-        Ok(Self { points })
-    }
-}
-
-impl FromStr for Parallel {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"^(\w+\s*\w+)(?:\s*(∥|(\|\|))\s*(\w+\s*\w+))+$").unwrap();
-            static ref SPLIT: Regex = Regex::new(r"∥|(\|\|)").unwrap();
-            static ref LINE: Regex = Regex::new(r"\s*(\w+)\s*(\w+)\s*").unwrap();
-        }
-        if !RE.is_match(s) {
-            return Err(());
-        }
-        let lines = SPLIT
-            .split(s)
-            .map(|l| {
-                LINE.captures(l)
-                    .unwrap()
-                    .iter()
-                    .skip(1)
-                    .map(|m| m.unwrap().as_str().to_string())
-                    .next_array()
-                    .unwrap()
-            })
-            .collect();
-        Ok(Self { lines })
-    }
-}
-
-
-impl FromStr for Perpendicular {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"^(\w+\s*\w+)(?:\s*(⟂|(_\|_))\s*(\w+\s*\w+))+$").unwrap();
-            static ref SPLIT: Regex = Regex::new(r"⟂|(_\|_)").unwrap();
-            static ref LINE: Regex = Regex::new(r"\s*(\w+)\s*(\w+)\s*").unwrap();
-        }
-        if !RE.is_match(s) {
-            return Err(());
-        }
-        let lines = SPLIT
-            .split(s)
-            .map(|l| {
-                LINE.captures(l)
-                    .unwrap()
-                    .iter()
-                    .skip(1)
-                    .map(|m| m.unwrap().as_str().to_string())
-                    .next_array()
-                    .unwrap()
-            })
-            .collect();
-        Ok(Self { lines })
-    }
 }
