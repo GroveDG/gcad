@@ -46,7 +46,7 @@ impl Constraint for Parallel {
         if !RE.is_match(s) {
             return Err(());
         }
-        let lines = SPLIT
+        let points = SPLIT
             .split(s)
             .map(|l| {
                 LINE.captures(l)
@@ -57,7 +57,7 @@ impl Constraint for Parallel {
                     .collect()
             })
             .concat();
-        Ok(Self { points: lines })
+        Ok(Self { points })
     }
 
     fn points(&self) -> &[PointID] {
@@ -140,7 +140,7 @@ impl Constraint for Perpendicular {
         if !RE.is_match(s) {
             return Err(());
         }
-        let lines = SPLIT
+        let points = SPLIT
             .split(s)
             .map(|l| {
                 LINE.captures(l)
@@ -151,7 +151,7 @@ impl Constraint for Perpendicular {
                     .collect()
             })
             .concat();
-        Ok(Self { points: lines })
+        Ok(Self { points })
     }
 
     fn points(&self) -> &[PointID] {
