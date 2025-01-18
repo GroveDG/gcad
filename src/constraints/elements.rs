@@ -9,7 +9,7 @@ use regex::Regex;
 use crate::{
     constraints::Constraint,
     math::{
-        geo::{Dimension, Geo},
+        geo::Geo,
         vector::{AboutEq, Number, Vector},
     },
     order::{PointID, PointIndex},
@@ -42,10 +42,6 @@ impl Constraint for Distance {
             ],
             dist: 0.0,
         })
-    }
-
-    fn dim(&self) -> Dimension {
-        Dimension::One
     }
 
     fn points(&self) -> &[PointID] {
@@ -108,10 +104,6 @@ impl Constraint for Angle {
             ],
             measure: 0.0,
         })
-    }
-
-    fn dim(&self) -> Dimension {
-        Dimension::One
     }
 
     fn points(&self) -> &[PointID] {

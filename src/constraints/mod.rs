@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     math::{
-        geo::{Dimension, Geo},
+        geo::Geo,
         vector::Vector,
     },
     order::{PointID, PointIndex},
@@ -19,7 +19,6 @@ pub trait Constraint: Debug + Display {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()>
     where
         Self: Sized;
-    fn dim(&self) -> Dimension;
     fn points(&self) -> &[PointID];
     fn points_mut(&mut self) -> &mut [PointID];
     fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID>;

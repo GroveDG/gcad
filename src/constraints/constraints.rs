@@ -8,7 +8,7 @@ use regex::Regex;
 
 use crate::{
     math::{
-        geo::{line_from_points, Dimension, Geo},
+        geo::{line_from_points, Geo},
         vector::{Number, Vector},
     },
     order::{PointID, PointIndex},
@@ -58,10 +58,6 @@ impl Constraint for Parallel {
             })
             .concat();
         Ok(Self { points: lines })
-    }
-
-    fn dim(&self) -> Dimension {
-        Dimension::One
     }
 
     fn points(&self) -> &[PointID] {
@@ -158,10 +154,6 @@ impl Constraint for Perpendicular {
         Ok(Self { points: lines })
     }
 
-    fn dim(&self) -> Dimension {
-        Dimension::One
-    }
-
     fn points(&self) -> &[PointID] {
         &self.points
     }
@@ -241,10 +233,6 @@ impl Constraint for Collinear {
             .map(|s| index.get_or_insert(s.trim()))
             .collect();
         Ok(Self { points })
-    }
-
-    fn dim(&self) -> Dimension {
-        Dimension::One
     }
 
     fn points(&self) -> &[PointID] {
