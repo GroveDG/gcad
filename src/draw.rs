@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-// use draw::{render, Canvas, Drawing, Style, SvgRenderer, RGB};
 use rsille::Canvas;
 
 use crate::{
@@ -35,26 +34,4 @@ pub fn draw(positions: HashMap<Point, Vector>) {
         canvas.set(pos.x, pos.y);
     }
     canvas.print();
-
-    //const dpu: Number = 96.0;
-    // let mut canvas = Canvas::new(
-    //     (size.x*dpu) as u32,
-    //     (size.y*dpu) as u32
-    // );
-
-    // for (_point, pos) in positions {
-    //     let can_pos = (pos - min) * dpu;
-    //     canvas.display_list.add(
-    //         Drawing::new()
-    //         .with_shape(draw::Shape::Circle { radius: 2 })
-    //         .with_xy(can_pos.x as f32, can_pos.y as f32)
-    //         .with_style(Style::filled(RGB { r: 0, g: 0, b: 0 }))
-    //     );
-    // }
-
-    // render::save(
-    //     &canvas,
-    //     "figure.svg",
-    //     SvgRenderer::new()
-    // ).or(Err("render failed".to_string())).unwrap();
 }
