@@ -1,6 +1,6 @@
 use crate::{
     constraints::{
-        constraints::{Collinear, Parallel, Perpendicular},
+        constraints::{Collinear, Parallel, Perpendicular, AnglePolarity},
         elements::{Angle, Distance},
         Constraint,
     },
@@ -39,6 +39,9 @@ pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Box<dyn Co
         return Ok(Box::new(parsed));
     }
     if let Ok(parsed) = Collinear::parse(line, index) {
+        return Ok(Box::new(parsed));
+    }
+    if let Ok(parsed) = AnglePolarity::parse(line, index) {
         return Ok(Box::new(parsed));
     }
     Err(format!("failed to parse constraint {line}"))

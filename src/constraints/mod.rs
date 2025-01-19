@@ -3,6 +3,8 @@ use std::{
     fmt::{Debug, Display},
 };
 
+use const_format::formatc;
+
 use crate::{
     math::{
         geo::Geo,
@@ -14,6 +16,11 @@ use crate::{
 pub mod constraints;
 pub mod elements;
 // pub mod modifiers;
+
+const POINT: &str = r"\s*\w+\s*";
+const TWO_POINTS: &str = r"\s*(\w+)\s+(\w+)\s*";
+const THREE_POINTS: &str = r"\s*(\w+)\s+(\w+)\s+(\w+)\s*";
+const ANGLE_EXPR: &str = formatc!(r"\s*∠\s*{THREE_POINTS}\s*");
 
 pub trait Constraint: Debug + Display {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()>

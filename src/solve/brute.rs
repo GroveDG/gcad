@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     constraints::elements::Point,
     math::{
-        geo::{choose, meet, Geo},
+        geo::{choose, meet, Geo, TwoD},
         vector::Vector,
     },
     order::{PointIndex, CID},
@@ -27,7 +27,7 @@ fn solve_iter(
             c.geo(&positions[..i], t_ind)
         })
         .reduce(meet)
-        .unwrap_or_else(|| vec![Geo::All]);
+        .unwrap_or_else(|| vec![Geo::Two(TwoD::All)]);
     for g in geo {
         positions[i] = choose(g);
         if solve_iter(order, index, positions, i + 1).is_ok() {

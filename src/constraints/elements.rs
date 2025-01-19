@@ -1,15 +1,13 @@
-use std::{
-    collections::HashSet,
-    fmt::Display,
-};
+use std::{collections::HashSet, fmt::Display};
 
+use const_format::formatc;
 use itertools::Itertools;
 use regex::Regex;
 
 use crate::{
-    constraints::Constraint,
+    constraints::{Constraint, ANGLE_EXPR, TWO_POINTS},
     math::{
-        geo::Geo,
+        geo::{Geo, OneD},
         vector::{AboutEq, Number, Vector},
     },
     order::{PointID, PointIndex},
@@ -32,7 +30,7 @@ impl Display for Distance {
 impl Constraint for Distance {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
         lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*\|\s*(\w+)\s*(\w+)\s*\|\s*$").unwrap();
+            static ref RE: Regex = Regex::new(formatc!(r"^\s*\|{TWO_POINTS}\|\s*$")).unwrap();
         }
         let captures = RE.captures(s).ok_or(())?;
         Ok(Self {
@@ -67,10 +65,10 @@ impl Constraint for Distance {
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
         let i: usize = if t_ind == 1 { 0 } else { 1 };
-        vec![Geo::Circle {
+        vec![Geo::One(OneD::Circle {
             c: pos[self.points[i]],
             r: self.dist,
-        }]
+        })]
     }
 }
 
@@ -93,9 +91,10 @@ impl Display for Angle {
 impl Constraint for Angle {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
         lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\s*[<∠]\s*(\w+)\s*(\w+)\s*(\w+)\s*$").unwrap();
+            static ref RE: Regex = Regex::new(format!(r"^\s*{ANGLE_EXPR}\s*$").as_str()).unwrap();
         }
-        let captures = RE.captures(s).ok_or(())?;
+        let s = s.replace("<", "∠");
+        let captures = RE.captures(&s).ok_or(())?;
         Ok(Self {
             points: [
                 index.get_or_insert(&captures[1]),
@@ -109,7 +108,7 @@ impl Constraint for Angle {
     fn points(&self) -> &[PointID] {
         self.points.as_slice()
     }
-    
+
     fn points_mut(&mut self) -> &mut [PointID] {
         self.points.as_mut_slice()
     }
@@ -137,12 +136,12 @@ impl Constraint for Angle {
             let mid = (s + e) / 2.0;
             let a = r * self.measure.cos();
             if a.about_zero() {
-                vec![Geo::Circle { c: mid, r }]
+                vec![Geo::One(OneD::Circle { c: mid, r })]
             } else {
                 let v_a = v.perp() * a;
                 vec![
-                    Geo::Circle { c: mid + v_a, r },
-                    Geo::Circle { c: mid - v_a, r },
+                    Geo::One(OneD::Circle { c: mid + v_a, r }),
+                    Geo::One(OneD::Circle { c: mid - v_a, r }),
                 ]
             }
         } else {
@@ -151,16 +150,16 @@ impl Constraint for Angle {
             let b = pos[self.points[i]];
             let b_v = (b - o).unit();
             vec![
-                Geo::Linear {
+                Geo::One(OneD::Linear {
                     o,
                     v: b_v.rot(self.measure),
                     l: 0.0,
-                },
-                Geo::Linear {
+                }),
+                Geo::One(OneD::Linear {
                     o,
                     v: b_v.rot(-self.measure),
                     l: 0.0,
-                },
+                }),
             ]
         }
     }

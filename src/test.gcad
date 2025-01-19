@@ -6,3 +6,5 @@ L-R-M
 
 <T L LL = <T R RR = 1.57
 |LL L| = |R RR| = 0.1
++/-<T L LL, -/+<T L R
++/-<T R RR, -/+<T R L

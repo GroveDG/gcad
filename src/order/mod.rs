@@ -17,6 +17,7 @@ pub struct PointIndex {
 }
 
 impl PointIndex {
+
     pub fn get_or_insert(&mut self, p: &str) -> PointID {
         self.id2p.get_by_right(p).copied().unwrap_or_else(|| {
             let id = self.id2p.len();
