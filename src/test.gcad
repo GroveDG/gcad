@@ -15,3 +15,11 @@ RR TT || R T
 LLL-LL-TT
 RRR-RR-TT
 LLL-L-R-RRR
+
+M-T-TTT
+|T TTT| = 0.1
+
+LL-TL-TT
+RR-TR-TT
+TL TTT || L M
+TR TTT || R M

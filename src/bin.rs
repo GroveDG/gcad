@@ -1,7 +1,8 @@
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::Write;
 
-use ansi_term::Style;
 use gsolve::draw::draw;
 use gsolve::order::bfs_order;
 use gsolve::parse::parse_document;
@@ -38,9 +39,14 @@ fn main() -> Result<(), String> {
     let positions = brute_solve(&mut index, order)?;
 
     print_header("Positions");
+    let mut csv = File::create("points.csv")
+    .map_err(|e| {format!("{e}")})?;
     for (point, pos) in positions.iter() {
         println!("{}: {}", point, pos);
+        csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
+        .map_err(|e| {format!("{e}")})?;
     }
+    drop(csv);
     
     print_header("Figure");
     draw(positions);

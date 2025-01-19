@@ -30,7 +30,7 @@ pub fn draw(positions: HashMap<Point, Vector>) {
     };
 
     canvas.set_size(size.x * scale, size.y * scale);
-    for (point, pos) in positions {
+    for (_, pos) in positions {
         let pos = (pos - min) * scale;
         canvas.set(pos.x, pos.y);
     }
