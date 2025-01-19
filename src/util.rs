@@ -11,9 +11,15 @@ pub(crate) fn locate<'a, T: PartialEq>(
 }
 
 pub fn print_header(s: &str) {
+    lazy_static::lazy_static! {
+        static ref STYLE: ansi_term::Style = {
+            ansi_term::Style::new()
+            .underline()
+        };
+    }
     println!(
         "\n\n{}\n",
-        ansi_term::Style::new().underline().paint(
+        STYLE.paint(
             [
                 s,
                 " ".repeat(term_size::dimensions().unwrap().0 - s.len())

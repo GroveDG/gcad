@@ -47,7 +47,7 @@ pub fn meet(g0: Vec<Geo>, g1: Vec<Geo>) -> Vec<Geo> {
 
 pub fn intersect(g0: Geo, g1: Geo) -> Vec<Geo> {
     match (g0, g1) {
-        (g, Geo::Zero(p)) | (Geo::Zero(p), g) => {
+        (g, Geo::Zero(p)) | (Geo::Zero(p), g) => { 
             if dist(p, g).about_zero() {
                 // The point is close enough.
                 vec![Geo::Zero(p)]
@@ -103,7 +103,7 @@ pub fn intersect(g0: Geo, g1: Geo) -> Vec<Geo> {
                     } else {
                         // The line passes through.
                         let sqrt_delta = delta.sqrt();
-                        vec![-v_o_c + sqrt_delta, -v_o_c + sqrt_delta]
+                        vec![-v_o_c + sqrt_delta, -v_o_c - sqrt_delta]
                     }
                     .into_iter()
                     .filter_map(|t| {
