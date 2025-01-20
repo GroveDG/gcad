@@ -11,9 +11,9 @@ pub fn draw(positions: HashMap<Point, Vector>) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
-    min -= size * 0.25;
-    max += size * 0.25;
-    size *= 1.5;
+    min -= size * 0.125;
+    max += size * 0.125;
+    size *= 1.25;
 
     let mut canvas = Canvas::new();
     let t_size = term_size::dimensions().unwrap();
@@ -27,8 +27,9 @@ pub fn draw(positions: HashMap<Point, Vector>) {
     } else {
         scale.y
     };
+    size *= scale;
 
-    canvas.set_size(size.x * scale, size.y * scale);
+    canvas.set_size(size.x, size.y);
     for (_, pos) in positions {
         let pos = (pos - min) * scale;
         canvas.set(pos.x, pos.y);
