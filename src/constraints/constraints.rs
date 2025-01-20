@@ -13,7 +13,7 @@ use crate::{
     order::{PointID, PointIndex},
 };
 
-use super::Constraint;
+use super::{flags::ConFlags, Constraint};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Parallel {
@@ -407,5 +407,9 @@ impl Constraint for AnglePolarity {
             points: points.into_flattened(),
             polarities,
         })
+    }
+
+    fn flags(&self) -> ConFlags {
+        ConFlags::NONE
     }
 }

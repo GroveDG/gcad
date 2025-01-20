@@ -4,18 +4,16 @@ use std::{
 };
 
 use const_format::formatc;
+use flags::ConFlags;
 
 use crate::{
-    math::{
-        geo::Geo,
-        vector::Vector,
-    },
+    math::{geo::Geo, vector::Vector},
     order::{PointID, PointIndex},
 };
 
 pub mod constraints;
 pub mod elements;
-// pub mod modifiers;
+pub mod flags;
 
 const POINT: &str = r"\s*\w+\s*";
 const TWO_POINTS: &str = r"\s*(\w+)\s+(\w+)\s*";
@@ -23,23 +21,48 @@ const THREE_POINTS: &str = r"\s*(\w+)\s+(\w+)\s+(\w+)\s*";
 const ANGLE_EXPR: &str = formatc!(r"\s*∠\s*{THREE_POINTS}\s*");
 
 pub trait Constraint: Debug + Display {
+    /// Determine if `s` is parseable as `Self`.
+    ///
+    /// If it is, `get_or_insert` all points to get their indicies
+    /// and return `Self`.
+    /// 
+    /// Otherwise, return `Err(())` *before* inserting points.
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()>
     where
         Self: Sized;
-    fn points(&self) -> &[PointID];
-    fn points_mut(&mut self) -> &mut [PointID];
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID>;
-    // REMEMBER: map old point IDs to ordered point IDs
-    fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo>;
-}
 
-// Only works if refrencing the same instance exactly.
-// This is fine because constraints are contained in
-// the PointIndex so all equal references refer to the
-// same address.
-impl PartialEq for dyn Constraint + '_ {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::addr_eq(std::ptr::from_ref(self), std::ptr::from_ref(other))
+    /// Return a slice iterating over all points refrenced by this
+    /// constraint (including duplicates).
+    ///
+    /// This allows the `PointIndex` to map points to constraints
+    /// without iterating over every constraint for every point.
+    fn points(&self) -> &[PointID];
+
+    /// Return a mut slice iterating over all points refrenced by
+    /// this constraint (including duplicates).
+    ///
+    /// This allows the `PointID`s to be replaced with ordered IDs
+    /// before solving. (See `geo`)
+    fn points_mut(&mut self) -> &mut [PointID];
+
+    /// Returns the valid targets of the constraint given a set of known
+    /// points.
+    ///
+    /// Already known points are invalid targets.
+    ///
+    /// An empty `Vec` should be returned if the constraint cannot be
+    /// applied.
+    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID>;
+
+    /// Returns the geometry representing the constraint's possibility
+    /// space.
+    ///
+    /// Point IDs have been replaced with their index in the ordering.
+    /// A point is known if its ID is an index in the `pos` slice.
+    fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo>;
+
+    /// Characterize this constraint with flags from `ConFlags`.
+    fn flags(&self) -> ConFlags {
+        ConFlags::default()
     }
 }
-impl Eq for dyn Constraint + '_ {}

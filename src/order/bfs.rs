@@ -5,6 +5,8 @@ use std::{
 
 use itertools::Itertools;
 
+use crate::constraints::flags::ConFlags;
+
 use super::{PointID, PointIndex, CID};
 
 type HashMapSet<K, V> = HashMap<K, HashSet<V>>;
@@ -29,8 +31,22 @@ fn expand_tree<'a>(
             }
             // Add constraint to target.
             s_v.push(cid);
-            // Return if just made discrete.
-            if s_v.len() != 2 {
+            // Skip if non-discretizing.
+            if !c.flags().contains(ConFlags::DISCRETIZING) {
+                continue;
+            }
+            // Push if just discretized.
+            if s_v
+                .iter()
+                .filter(|&cid| {
+                    index
+                        .get_constraint(*cid)
+                        .flags()
+                        .contains(ConFlags::DISCRETIZING)
+                })
+                .count()
+                != 2
+            {
                 continue;
             }
             new_points.push(t)
@@ -43,10 +59,7 @@ fn compute_tree<'a>(
     root: PointID,
     orbiter: PointID,
     index: &PointIndex,
-) -> (
-    Vec<(PointID, Vec<CID>)>,
-    HashSet<PointID>,
-) {
+) -> (Vec<(PointID, Vec<CID>)>, HashSet<PointID>) {
     let mut support = HashMap::new();
     let mut points: HashSet<PointID> = HashSet::from_iter([root]);
 
@@ -132,6 +145,17 @@ pub fn bfs_order(index: &mut PointIndex) -> Vec<Vec<CID>> {
             panic!("multiple trees")
         } else {
             mapping.insert(id, order.len());
+            
+            // Move non-discretizing to back.
+            let mut non: Vec<_>;
+            (cids, non) = cids.into_iter().partition(|cid| {
+                index
+                    .get_constraint(*cid)
+                    .flags()
+                    .contains(ConFlags::DISCRETIZING)
+            });
+            cids.append(&mut non);
+
             order.push(cids);
         }
     }
