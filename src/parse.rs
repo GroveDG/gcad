@@ -1,48 +1,54 @@
 use crate::{
     constraints::{
-        constraints::{Collinear, Parallel, Perpendicular, AnglePolarity},
+        constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
         elements::{Angle, Distance},
         Constraint,
-    },
-    math::vector::Number, order::PointIndex,
+    }, draw::parse_path, math::vector::Number, order::PointIndex
 };
 
 pub fn parse_document(doc: String) -> Result<PointIndex, String> {
     let mut index = PointIndex::default();
     for line in doc.lines() {
-        for c in parse_line(line, &mut index)? {
-            index.add_constraint(c);
+        if parse_line(line, &mut index).is_err() {
+            return Err(format!("failed to parse line: {line}"));
         }
     }
     Ok(index)
 }
 
-pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
     line = line.trim();
     if line.is_empty() {
-        return Ok(Vec::new());
+        return Ok(());
+    }
+    if let Ok(cs) = parse_constraint(line, index) {
+        for c in cs {
+            index.add_constraint(c);
+        }
+        return Ok(());
+    }
+    if let Ok(path) = parse_path(line) {
+        index.add_path(path);
+        return Ok(());
+    }
+    Err(())
+}
+
+pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
+    if let Ok(parsed) = Parallel::parse(line, index) {
+        return Ok(vec![Box::new(parsed)]);
+    }
+    if let Ok(parsed) = Perpendicular::parse(line, index) {
+        return Ok(vec![Box::new(parsed)]);
+    }
+    if let Ok(parsed) = Collinear::parse(line, index) {
+        return Ok(vec![Box::new(parsed)]);
+    }
+    if let Ok(parsed) = AnglePolarity::parse(line, index) {
+        return Ok(vec![Box::new(parsed)]);
     }
     if let Ok(parsed) = parse_equality(line, index) {
         return Ok(parsed);
-    }
-    if let Ok(parsed) = parse_constraint(line, index) {
-        return Ok(vec![parsed]);
-    }
-    Err(format!("failed to parse line: {line}"))
-}
-
-pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Box<dyn Constraint>, String> {
-    if let Ok(parsed) = Parallel::parse(line, index) {
-        return Ok(Box::new(parsed));
-    }
-    if let Ok(parsed) = Perpendicular::parse(line, index) {
-        return Ok(Box::new(parsed));
-    }
-    if let Ok(parsed) = Collinear::parse(line, index) {
-        return Ok(Box::new(parsed));
-    }
-    if let Ok(parsed) = AnglePolarity::parse(line, index) {
-        return Ok(Box::new(parsed));
     }
     Err(format!("failed to parse constraint {line}"))
 }

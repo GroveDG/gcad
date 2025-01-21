@@ -20,6 +20,7 @@ strip = true        # Strip symbols from binary*
 
 [dependencies]
 ansi_term = "0.12.1"
+argparse = "0.2.2"
 bimap = "0.6.3"
 const_format = { version = "0.2.34", features = ["fmt"] }
 itertools = "0.14.0"

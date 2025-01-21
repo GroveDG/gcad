@@ -75,6 +75,12 @@ impl Vector {
     }
 }
 
+impl Into<(Number, Number)> for Vector {
+    fn into(self) -> (Number, Number) {
+        (self.x, self.y)
+    }
+}
+
 impl Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({:.2}, {:.2})", self.x, self.y)

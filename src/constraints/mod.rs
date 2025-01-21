@@ -15,10 +15,10 @@ pub mod constraints;
 pub mod elements;
 pub mod flags;
 
-const POINT: &str = r"\s*\w+\s*";
-const TWO_POINTS: &str = r"\s*(\w+)\s+(\w+)\s*";
-const THREE_POINTS: &str = r"\s*(\w+)\s+(\w+)\s+(\w+)\s*";
-const ANGLE_EXPR: &str = formatc!(r"\s*∠\s*{THREE_POINTS}\s*");
+pub(crate) const POINT: &str = r"\s*(\w+)\s*";
+pub(crate) const TWO_POINTS: &str = r"\s*(\w+)\s+(\w+)\s*";
+pub(crate) const THREE_POINTS: &str = r"\s*(\w+)\s+(\w+)\s+(\w+)\s*";
+pub(crate) const ANGLE_EXPR: &str = formatc!(r"\s*∠\s*{THREE_POINTS}\s*");
 
 pub trait Constraint: Debug + Display {
     /// Determine if `s` is parseable as `Self`.
