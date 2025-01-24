@@ -86,27 +86,38 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
 
     for path in index.paths() {
         let mut d = String::new();
-        for cmd in path {
-            match cmd {
+        let mut first = &String::new();
+        for (i, cmd) in path.iter().enumerate() {
+            let end = match cmd {
                 PathCmd::Move(p) => {
                     let (x_0, y_0) = positions[p].into();
-                    d.push_str(&format!("M {x_0} {y_0} "))
+                    d.push_str(&format!("M {x_0} {y_0} "));
+                    first = p;
+                    p
                 }
                 PathCmd::Line(p) => {
                     let (x_0, y_0) = positions[p].into();
-                    d.push_str(&format!("L {x_0} {y_0} "))
+                    if !(i == path.len()-1 && first == p) {
+                        d.push_str(&format!("L {x_0} {y_0} "));
+                    }
+                    p
                 }
                 PathCmd::Quadratic(p0, p1) => {
                     let (x_0, y_0) = positions[p0].into();
                     let (x_1, y_1) = positions[p1].into();
-                    d.push_str(&format!("Q {x_0} {y_0}, {x_1} {y_1} "))
+                    d.push_str(&format!("Q {x_0} {y_0}, {x_1} {y_1} "));
+                    p1
                 }
                 PathCmd::Cubic(p0, p1, p2) => {
                     let (x_0, y_0) = positions[p0].into();
                     let (x_1, y_1) = positions[p1].into();
                     let (x_2, y_2) = positions[p2].into();
-                    d.push_str(&format!("C {x_0} {y_0}, {x_1} {y_1}, {x_2} {y_2} "))
+                    d.push_str(&format!("C {x_0} {y_0}, {x_1} {y_1}, {x_2} {y_2} "));
+                    p2
                 }
+            };
+            if i == path.len()-1 && first == end {
+                d.push_str("Z");
             }
         }
         svg.write("\n\t".as_bytes())?;
@@ -116,7 +127,7 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathCmd {
     Move(Point),
     Line(Point),
