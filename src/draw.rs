@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Write, os::unix::fs::FileExt};
 
 use const_format::formatc;
 use regex::Regex;
@@ -10,7 +10,15 @@ use crate::{
     order::PointIndex,
 };
 
-pub fn draw(positions: HashMap<Point, Vector>, index: &PointIndex) {
+#[derive(Debug, Clone, Copy)]
+pub enum Output {
+    None,
+    CSV,
+    Terminal,
+    SVG,
+}
+
+pub fn draw_terminal(mut positions: HashMap<Point, Vector>, index: &PointIndex) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
@@ -32,9 +40,10 @@ pub fn draw(positions: HashMap<Point, Vector>, index: &PointIndex) {
     };
     size *= scale;
 
-    let tf = |v: Vector| -> Vector {
-        (v - min) * scale
-    };
+    for pos in positions.values_mut() {
+        *pos -= min;
+        *pos *= scale;
+    }
 
     canvas.set_size(size.x, size.y);
     for (_, &pos) in positions.iter() {
@@ -45,18 +54,67 @@ pub fn draw(positions: HashMap<Point, Vector>, index: &PointIndex) {
         let mut pos = Vector::ZERO;
         for cmd in path {
             pos = match cmd {
-                PathCmd::Move(p) => tf(positions[p]),
+                PathCmd::Move(p) => positions[p],
                 PathCmd::Line(p) => {
-                    let pos_1 = tf(positions[p]);
-                    canvas.line(pos.into(), pos_1.into());
-                    pos_1
+                    let pos_0 = positions[p];
+                    canvas.line(pos.into(), pos_0.into());
+                    pos_0
                 }
-                PathCmd::Quadratic(_, _) => todo!(),
-                PathCmd::Cubic(_, _, _) => todo!(),
+                PathCmd::Quadratic(_, _) => unimplemented!(),
+                PathCmd::Cubic(_, _, _) => unimplemented!(),
             }
         }
     }
     canvas.print();
+}
+
+pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> std::io::Result<()> {
+    let (min, max) = bounding_box(positions.values());
+    let size = max - min;
+    let (size_x, size_y) = size.into();
+
+    for pos in positions.values_mut() {
+        *pos -= min;
+    }
+
+    let mut svg = File::create("figure.svg")?;
+
+    svg.write_at(
+        format!(r#"<svg width="{size_x}" height="{size_y}" xmlns="http://www.w3.org/2000/svg">"#)
+            .as_bytes(),
+        0,
+    )?;
+
+    for path in index.paths() {
+        let mut d = String::new();
+        for cmd in path {
+            match cmd {
+                PathCmd::Move(p) => {
+                    let (x_0, y_0) = positions[p].into();
+                    d.push_str(&format!("M {x_0} {y_0} "))
+                }
+                PathCmd::Line(p) => {
+                    let (x_0, y_0) = positions[p].into();
+                    d.push_str(&format!("L {x_0} {y_0} "))
+                }
+                PathCmd::Quadratic(p0, p1) => {
+                    let (x_0, y_0) = positions[p0].into();
+                    let (x_1, y_1) = positions[p1].into();
+                    d.push_str(&format!("Q {x_0} {y_0} {x_1} {y_1} "))
+                }
+                PathCmd::Cubic(p0, p1, p2) => {
+                    let (x_0, y_0) = positions[p0].into();
+                    let (x_1, y_1) = positions[p1].into();
+                    let (x_2, y_2) = positions[p2].into();
+                    d.push_str(&format!("C {x_0} {y_0} {x_1} {y_1} {x_2} {y_2} "))
+                }
+            }
+        }
+        svg.write("\n\t".as_bytes())?;
+        svg.write(format!(r#"<path d="{d}" fill="black"/>"#).as_bytes())?;
+    }
+    svg.write("\n</svg>".as_bytes())?;
+    Ok(())
 }
 
 #[derive(Debug, Clone)]

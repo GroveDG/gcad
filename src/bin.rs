@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Write;
 
 use argparse::ArgumentParser;
-use gsolve::draw::draw;
+use gsolve::draw::{self, draw_svg, draw_terminal};
 use gsolve::order::bfs_order;
 use gsolve::parse::parse_document;
 use gsolve::solve::brute_solve;
@@ -13,7 +13,7 @@ use gsolve::util::print_header;
 fn main() -> Result<(), String> {
     let mut file_path = String::new();
     let mut verbose = true;
-    let mut output = true;
+    let mut output: draw::Output = draw::Output::None;
 
     {
         let mut parser = ArgumentParser::new();
@@ -40,13 +40,18 @@ fn main() -> Result<(), String> {
             .refer(&mut output)
             .add_option(
                 &["--no_out", "--output_none"],
-                argparse::StoreFalse,
+                argparse::StoreConst(draw::Output::None),
                 "Do not output to a file",
             )
             .add_option(
-                &["--csv_out", "--output_csv"],
-                argparse::StoreTrue,
+                &["--csv", "--csv_out", "--output_csv"],
+                argparse::StoreConst(draw::Output::CSV),
                 "Output to CSV",
+            )
+            .add_option(
+                &["--svg", "--svg_out", "--output_svg"],
+                argparse::StoreConst(draw::Output::SVG),
+                "Output to SVG",
             );
 
         parser.parse_args_or_exit();
@@ -85,17 +90,22 @@ fn main() -> Result<(), String> {
             }
         }
     }
-    if output {
-        let mut csv = File::create("points.csv").map_err(|e| format!("{e}"))?;
-        for (point, pos) in positions.iter() {
-            csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
-                .map_err(|e| format!("{e}"))?;
+    match output {
+        draw::Output::None => {}
+        draw::Output::CSV => {
+            let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
+            for (point, pos) in positions.iter() {
+                csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
+                    .map_err(|e| e.to_string())?;
+            }
         }
-    }
-
-    if verbose {
-        print_header("Figure");
-        draw(positions, &index);
+        draw::Output::SVG => {
+            draw_svg(positions, &index).map_err(|e| e.to_string())?;
+        }
+        draw::Output::Terminal => {
+            print_header("Figure");
+            draw_terminal(positions, &index);
+        }
     }
 
     Ok(())
