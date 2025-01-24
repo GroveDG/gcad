@@ -12,6 +12,10 @@ GCAD (short for Geometry CAD) is a text-based CAD format based on geometry notat
   Perpendicular ╷ A B ⟂ C D    ╷ A B _|_ C D  
   Collinear     ╷ A-B-C        ╷
   Polarity      ╷ ±∠A B C, ... ╷ +/-<A B C, ...
+                ╷              ╷
+  Line          ╷ A→B          ╷ A->B
+  Quadratic     ╷ A-B→C        ╷ A-B->C
+  Cubic         ╷ A-B-C→D      ╷ A-B-C->D
 ```
 
 # Syntax
@@ -29,6 +33,8 @@ GCAD uses significant whitespace. Line breaks end statements and spaces separate
 
 Comments are enclosed in quotation marks (") with whitespace allowed before and after.
 
+
+
 # Solving
 
 Geometric constraint solving (GCS) is an NP problem, solving complexity increases exponentially. As such, the current philosophy of GCAD solving is that solvers should...
@@ -42,3 +48,11 @@ This current GCS solver is of my own design. It converts constraints into the ge
 To determine the order in which to solve the points, GSolver uses a breadth-first search from some origin/root point. Constraints determine which points they can be applied to given the currently known points. A point is considered discrete (and therefore known for ordering purposes) when two or more constraints are applied. This is assumed because two 1D elements (lines, including curves) intersect at a finite set of 0D elements (points) as long as they are not identical for some continuous range.
 
 Constraints whose possibility space is a 2D element (area) are applied only to sets of points and are not counted towards the two constraints needed for discretizing.
+
+# TODO
+
+- Figure orientation
+- Figure positioning
+- Cropping undrawn points
+- Right-to-left text support
+  - i.e. "<-" instead of "->"

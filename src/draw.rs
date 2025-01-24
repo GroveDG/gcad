@@ -124,16 +124,18 @@ pub enum PathCmd {
     Cubic(Point, Point, Point),
 }
 
-pub fn parse_path(mut s: &str) -> Result<Vec<PathCmd>, ()> {
+pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
     lazy_static::lazy_static! {
         static ref RE: Regex = Regex::new(formatc!(
-            r"^{POINT}((?:-{POINT}){{0,2}}->{POINT})+$"
+            r"^{POINT}((-{POINT}){{0,2}}(->){POINT})+$"
         )).unwrap();
         static ref MOVE: Regex = Regex::new(formatc!(r"^{POINT}")).unwrap();
 
     }
 
-    if !RE.is_match(s) {
+    let mut s = s.replace("→", "->");
+
+    if !RE.is_match(&s) {
         return Err(());
     }
 
@@ -141,9 +143,9 @@ pub fn parse_path(mut s: &str) -> Result<Vec<PathCmd>, ()> {
 
     // Starting M (Move) command
     {
-        let c = MOVE.captures(s).unwrap();
+        let c = MOVE.captures(&s).unwrap();
         cmds.push(PathCmd::Move(c[1].to_string()));
-        s = &s[c.len()..]
+        s = s.split_off(c.len())
     }
 
     let mut points = Vec::new();
