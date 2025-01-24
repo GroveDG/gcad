@@ -85,7 +85,7 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
 
     for path in index.paths() {
         let mut d = String::new();
-        let mut first = &String::new();
+        let mut first = "";
         for (i, cmd) in path.iter().enumerate() {
             let end = match cmd {
                 PathCmd::Move(p) => {
