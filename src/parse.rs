@@ -31,6 +31,9 @@ pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
         index.add_path(path);
         return Ok(());
     }
+    if line.trim_start().starts_with("\"") && line.trim_end().ends_with("\"") {
+        return Ok(());
+    }
     Err(())
 }
 

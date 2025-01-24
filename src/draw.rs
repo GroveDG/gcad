@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::Write, os::unix::fs::FileExt};
+use std::{collections::HashMap, fs::File, io::Write};
 
 use const_format::formatc;
 use regex::Regex;
@@ -79,10 +79,9 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
 
     let mut svg = File::create("figure.svg")?;
 
-    svg.write_at(
+    svg.write(
         format!(r#"<svg width="{size_x}" height="{size_y}" xmlns="http://www.w3.org/2000/svg">"#)
-            .as_bytes(),
-        0,
+            .as_bytes()
     )?;
 
     for path in index.paths() {
@@ -100,13 +99,13 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
                 PathCmd::Quadratic(p0, p1) => {
                     let (x_0, y_0) = positions[p0].into();
                     let (x_1, y_1) = positions[p1].into();
-                    d.push_str(&format!("Q {x_0} {y_0} {x_1} {y_1} "))
+                    d.push_str(&format!("Q {x_0} {y_0}, {x_1} {y_1} "))
                 }
                 PathCmd::Cubic(p0, p1, p2) => {
                     let (x_0, y_0) = positions[p0].into();
                     let (x_1, y_1) = positions[p1].into();
                     let (x_2, y_2) = positions[p2].into();
-                    d.push_str(&format!("C {x_0} {y_0} {x_1} {y_1} {x_2} {y_2} "))
+                    d.push_str(&format!("C {x_0} {y_0}, {x_1} {y_1}, {x_2} {y_2} "))
                 }
             }
         }

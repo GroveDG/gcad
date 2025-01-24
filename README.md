@@ -27,6 +27,8 @@ There are also unique notations created for GCAD, like "-" to denote collinear p
 
 GCAD uses significant whitespace. Line breaks end statements and spaces separate the names of points.
 
+Comments are enclosed in quotation marks (") with whitespace allowed before and after.
+
 # Solving
 
 Geometric constraint solving (GCS) is an NP problem, solving complexity increases exponentially. As such, the current philosophy of GCAD solving is that solvers should...
