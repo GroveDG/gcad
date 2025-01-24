@@ -7,7 +7,7 @@ L-R-M
 |L M| = |M R| = 0.5
 
 <T L LL = <T R RR = 1.57
-|LL L| = |R RR| = 0.1
+|LL L| = |R RR| = |T TTT| = 0.1
 +/-<T L LL, +/-<T L R
 +/-<T R RR, +/-<T R L
 
@@ -19,7 +19,6 @@ RRR-RR-TT
 LLL-L-R-RRR
 
 M-T-TTT
-|T TTT| = 0.1
 
 LL-TL-TT
 RR-TR-TT

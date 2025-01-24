@@ -52,6 +52,14 @@ fn main() -> Result<(), String> {
                 &["--svg", "--svg_out", "--output_svg"],
                 argparse::StoreConst(draw::Output::SVG),
                 "Output to SVG",
+            )
+            .add_option(
+                &[
+                    "--term", "--term_out", "--output_term",
+                    "--terminal", "--terminal_out", "--output_terminal"
+                ],
+                argparse::StoreConst(draw::Output::Terminal),
+                "Display in terminal",
             );
 
         parser.parse_args_or_exit();

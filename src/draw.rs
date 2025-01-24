@@ -47,7 +47,6 @@ pub fn draw_terminal(mut positions: HashMap<Point, Vector>, index: &PointIndex) 
 
     canvas.set_size(size.x, size.y);
     for (_, &pos) in positions.iter() {
-        let pos = (pos - min) * scale;
         canvas.set(pos.x, pos.y);
     }
     for path in index.paths() {
