@@ -18,7 +18,7 @@ use crate::{
     parse::{flag, ident, list_len, separated_listn, ws},
 };
 
-use super::{flags::ConFlags, Constraint};
+use super::{ConFlags, Constraint};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Parallel {
@@ -401,6 +401,6 @@ impl Constraint for AnglePolarity {
     }
 
     fn flags(&self) -> ConFlags {
-        ConFlags::NONE
+        ConFlags::empty()
     }
 }

@@ -3,7 +3,18 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use flags::ConFlags;
+bitflags! {
+    pub struct ConFlags: u8 {
+        const DISCRETIZING = 0b0000_0001;
+    }
+}
+impl Default for ConFlags {
+    fn default() -> Self {
+        ConFlags::DISCRETIZING
+    }
+}
+
+use bitflags::bitflags;
 
 use crate::{
     math::{geo::Geo, vector::Vector},
@@ -12,7 +23,6 @@ use crate::{
 
 pub mod constraints;
 pub mod elements;
-pub mod flags;
 
 pub trait Constraint: Debug + Display {
     /// Determine if `s` is parseable as `Self`.

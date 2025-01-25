@@ -5,7 +5,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::constraints::flags::ConFlags;
+use crate::constraints::ConFlags;
 
 use super::{PointID, PointIndex, CID};
 

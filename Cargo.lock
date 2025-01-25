@@ -79,6 +79,7 @@ dependencies = [
  "ansi_term",
  "argparse",
  "bimap",
+ "bitflags",
  "itertools",
  "nom",
  "rsille",
