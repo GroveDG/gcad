@@ -150,8 +150,24 @@ pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
         return Err(());
     };
 
-    let mut cmds = Vec::new();
+    {
+        let mut count = 0;
+        for (b, _) in results.iter() {
+            count += 1;
+            if *b {
+                if count > 3 {
+                    return Err(());
+                }
+                count = 0;
+            }
+        }
+        if count > 0 {
+            return Err(());
+        }
+    }
+
     let mut results = results.into_iter();
+    let mut cmds = Vec::new();
 
     // Starting M (Move) command
     {
@@ -178,8 +194,6 @@ pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
         });
         points.clear();
     }
-
-    // TODO: Add !points.is_empty() error.
 
     Ok(cmds)
 }
