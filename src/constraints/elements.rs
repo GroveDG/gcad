@@ -1,16 +1,20 @@
 use std::{collections::HashSet, fmt::Display};
 
-use const_format::formatc;
 use itertools::Itertools;
-use regex::Regex;
+use nom::{
+    character::complete::{char as nom_char, one_of, space1},
+    combinator::all_consuming,
+    sequence::{delimited, preceded},
+};
 
 use crate::{
-    constraints::{Constraint, ANGLE_EXPR, TWO_POINTS},
+    constraints::Constraint,
     math::{
         geo::{Geo, OneD},
         vector::{AboutEq, Number, Vector},
     },
     order::{PointID, PointIndex},
+    parse::{ident, list_len, ws},
 };
 
 pub type Point = String;
@@ -29,16 +33,17 @@ impl Display for Distance {
 
 impl Constraint for Distance {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(formatc!(r"^\s*\|{TWO_POINTS}\|\s*$")).unwrap();
-        }
-        let captures = RE.captures(s).ok_or(())?;
+        let mut parser = all_consuming(ws(delimited(
+            nom_char::<&str, ()>('|'),
+            ws(list_len(space1, ident, 2)),
+            nom_char::<&str, ()>('|'),
+        )));
+        let Ok((_, p)) = parser(s) else {
+            return Err(());
+        };
         Ok(Self {
-            points: [
-                index.get_or_insert(&captures[1]),
-                index.get_or_insert(&captures[2]),
-            ],
-            dist: 0.0,
+            points: [index.get_or_insert(p[0]), index.get_or_insert(p[1])],
+            dist: 0.0, // Placeholder value
         })
     }
 
@@ -90,18 +95,20 @@ impl Display for Angle {
 
 impl Constraint for Angle {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(format!(r"^\s*{ANGLE_EXPR}\s*$").as_str()).unwrap();
-        }
-        let s = s.replace("<", "∠");
-        let captures = RE.captures(&s).ok_or(())?;
+        let mut parser = all_consuming(ws(preceded(
+            one_of::<&str, &[char], ()>(&['<', '∠']),
+            ws(list_len(space1, ident, 3)),
+        )));
+        let Ok((_, p)) = parser(s) else {
+            return Err(());
+        };
         Ok(Self {
             points: [
-                index.get_or_insert(&captures[1]),
-                index.get_or_insert(&captures[2]),
-                index.get_or_insert(&captures[3]),
+                index.get_or_insert(p[0]),
+                index.get_or_insert(p[1]),
+                index.get_or_insert(p[2]),
             ],
-            measure: 0.0,
+            measure: 0.0, // Placeholder value
         })
     }
 

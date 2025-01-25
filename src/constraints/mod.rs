@@ -3,7 +3,6 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use const_format::formatc;
 use flags::ConFlags;
 
 use crate::{
@@ -15,17 +14,12 @@ pub mod constraints;
 pub mod elements;
 pub mod flags;
 
-pub(crate) const POINT: &str = r"\s*(\w+)\s*";
-pub(crate) const TWO_POINTS: &str = r"\s*(\w+)\s+(\w+)\s*";
-pub(crate) const THREE_POINTS: &str = r"\s*(\w+)\s+(\w+)\s+(\w+)\s*";
-pub(crate) const ANGLE_EXPR: &str = formatc!(r"\s*∠\s*{THREE_POINTS}\s*");
-
 pub trait Constraint: Debug + Display {
     /// Determine if `s` is parseable as `Self`.
     ///
     /// If it is, `get_or_insert` all points to get their indicies
     /// and return `Self`.
-    /// 
+    ///
     /// Otherwise, return `Err(())` *before* inserting points.
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()>
     where

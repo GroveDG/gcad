@@ -1,16 +1,21 @@
 use std::{collections::HashSet, fmt::Display};
 
-use const_format::formatc;
 use itertools::Itertools;
-use regex::Regex;
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::space1,
+    combinator::all_consuming,
+    sequence::{pair, terminated},
+};
 
 use crate::{
-    constraints::{ANGLE_EXPR, POINT, TWO_POINTS},
     math::{
         geo::{line_from_points, Geo, OneD, TwoD},
         vector::{Number, Vector},
     },
     order::{PointID, PointIndex},
+    parse::{flag, ident, list_len, separated_listn, ws},
 };
 
 use super::{flags::ConFlags, Constraint};
@@ -36,27 +41,21 @@ impl Display for Parallel {
 
 impl Constraint for Parallel {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let s = s.replace("||", "∥");
-        lazy_static::lazy_static! {
-            static ref RE: Regex =
-                Regex::new(formatc!(r"^{TWO_POINTS}(∥{TWO_POINTS})+$")).unwrap();
-            static ref LINE: Regex = Regex::new(TWO_POINTS).unwrap();
-        }
-        if !RE.is_match(&s) {
+        let mut parser = all_consuming(ws(separated_listn(
+            alt((tag("∥"), tag("||"))),
+            ws(list_len(space1, ident, 2)),
+            2,
+        )));
+        let Ok((_, points)) = parser(s) else {
             return Err(());
-        }
-        let points = s
-            .split("∥")
-            .map(|l| {
-                LINE.captures(l)
-                    .unwrap()
-                    .iter()
-                    .skip(1)
-                    .map(|m| index.get_or_insert(m.unwrap().as_str()))
-                    .collect()
-            })
-            .concat();
-        Ok(Self { points })
+        };
+        Ok(Self {
+            points: points
+                .into_iter()
+                .flatten()
+                .map(|p| index.get_or_insert(p))
+                .collect(),
+        })
     }
 
     fn points(&self) -> &[PointID] {
@@ -130,27 +129,21 @@ impl Display for Perpendicular {
 
 impl Constraint for Perpendicular {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let s = s.replace("_|_", "⟂");
-        lazy_static::lazy_static! {
-            static ref RE: Regex =
-                Regex::new(formatc!(r"^{TWO_POINTS}(⟂{TWO_POINTS})+$")).unwrap();
-            static ref LINE: Regex = Regex::new(TWO_POINTS).unwrap();
-        }
-        if !RE.is_match(&s) {
+        let mut parser = all_consuming(ws(separated_listn(
+            alt((tag("⟂"), tag("_|_"))),
+            ws(list_len(space1, ident, 2)),
+            2,
+        )));
+        let Ok((_, points)) = parser(s) else {
             return Err(());
-        }
-        let points = s
-            .split("⟂")
-            .map(|l| {
-                LINE.captures(l)
-                    .unwrap()
-                    .iter()
-                    .skip(1)
-                    .map(|m| index.get_or_insert(m.unwrap().as_str()))
-                    .collect()
-            })
-            .concat();
-        Ok(Self { points })
+        };
+        Ok(Self {
+            points: points
+                .into_iter()
+                .flatten()
+                .map(|p| index.get_or_insert(p))
+                .collect(),
+        })
     }
 
     fn points(&self) -> &[PointID] {
@@ -221,17 +214,13 @@ impl Display for Collinear {
 
 impl Constraint for Collinear {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(formatc!(r"^{POINT}(-{POINT})+$")).unwrap();
-        }
-        if !RE.is_match(s) {
+        let mut parser = all_consuming(ws(separated_listn(tag("-"), ws(ident), 3)));
+        let Ok((_, points)) = parser(s) else {
             return Err(());
-        }
-        let points = s
-            .split("-")
-            .map(|s| index.get_or_insert(s.trim()))
-            .collect();
-        Ok(Self { points })
+        };
+        Ok(Self {
+            points: points.into_iter().map(|p| index.get_or_insert(p)).collect(),
+        })
     }
 
     fn points(&self) -> &[PointID] {
@@ -314,6 +303,43 @@ impl Display for AnglePolarity {
 }
 
 impl Constraint for AnglePolarity {
+    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
+        let mut parser = all_consuming(ws(separated_listn(
+            tag(","),
+            ws(pair(
+                terminated(
+                    ws(flag(
+                        alt((tag("±"), tag("+/-"))),
+                        alt((tag("∓"), tag("-/+"))),
+                    )),
+                    ws(alt((tag("<"), tag("∠")))),
+                ),
+                ws(list_len(space1, ident, 3)),
+            )),
+            2,
+        )));
+        let Ok((_, points)) = parser(s) else {
+            return Err(());
+        };
+        let (polarities, points): (Vec<Polarity>, Vec<[PointID; 3]>) = points
+            .into_iter()
+            .map(|(pol, p)| {
+                (
+                    if pol { Polarity::Pro } else { Polarity::Anti },
+                    [
+                        index.get_or_insert(p[0]),
+                        index.get_or_insert(p[1]),
+                        index.get_or_insert(p[2]),
+                    ],
+                )
+            })
+            .unzip();
+        Ok(Self {
+            points: points.into_flattened(),
+            polarities,
+        })
+    }
+
     fn points(&self) -> &[PointID] {
         &self.points
     }
@@ -372,41 +398,6 @@ impl Constraint for AnglePolarity {
             o,
             n: (p - o).unit().perp() * t_dir,
         })]
-    }
-
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let s = s.replace("+/-", "±");
-        let s = s.replace("-/+", "∓");
-        let s = s.replace("<", "∠");
-        lazy_static::lazy_static! {
-            static ref RE: Regex = Regex::new(formatc!(r"^\s*[±∓]{ANGLE_EXPR}(,\s*[±∓]{ANGLE_EXPR})+$")).unwrap();
-            static ref ANGLE: Regex = Regex::new(ANGLE_EXPR).unwrap();
-        }
-        if !RE.is_match(&s) {
-            return Err(());
-        }
-        let (points, polarities): (Vec<[usize; 3]>, _) = s
-            .split(",")
-            .map(|s| {
-                let captures = ANGLE.captures(s).unwrap();
-                (
-                    [
-                        index.get_or_insert(&captures[1]),
-                        index.get_or_insert(&captures[2]),
-                        index.get_or_insert(&captures[3]),
-                    ],
-                    if s.contains("±") {
-                        Polarity::Pro
-                    } else {
-                        Polarity::Anti
-                    },
-                )
-            })
-            .unzip();
-        Ok(Self {
-            points: points.into_flattened(),
-            polarities,
-        })
     }
 
     fn flags(&self) -> ConFlags {

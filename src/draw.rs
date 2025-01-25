@@ -1,13 +1,12 @@
 use std::{collections::HashMap, fs::File, io::Write};
 
-use const_format::formatc;
-use regex::Regex;
+use nom::{bytes::complete::tag, combinator::all_consuming, sequence::pair};
 use rsille::Canvas;
 
 use crate::{
-    constraints::{elements::Point, POINT},
+    constraints::elements::Point,
     math::vector::{bounding_box, Number, Vector},
-    order::PointIndex,
+    order::PointIndex, parse::{ident, opt_flag, separated_listn, ws},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -84,7 +83,7 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
 
     svg.write(
         format!(r#"<svg width="{size_x}" height="{size_y}" xmlns="http://www.w3.org/2000/svg">"#)
-            .as_bytes()
+            .as_bytes(),
     )?;
 
     for path in index.paths() {
@@ -100,7 +99,7 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
                 }
                 PathCmd::Line(p) => {
                     let (x_0, y_0) = positions[p].into();
-                    if !(i == path.len()-1 && first == p) {
+                    if !(i == path.len() - 1 && first == p) {
                         d.push_str(&format!("L {x_0} {y_0} "));
                     }
                     p
@@ -119,7 +118,7 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
                     p2
                 }
             };
-            if i == path.len()-1 && first == end {
+            if i == path.len() - 1 && first == end {
                 d.push_str("Z");
             }
         }
@@ -139,36 +138,33 @@ pub enum PathCmd {
 }
 
 pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
-    lazy_static::lazy_static! {
-        static ref RE: Regex = Regex::new(formatc!(
-            r"^{POINT}((-{POINT}){{0,2}}(->){POINT})+$"
-        )).unwrap();
-        static ref MOVE: Regex = Regex::new(formatc!(r"^{POINT}")).unwrap();
+    let s = s.replace("→", "->");
 
-    }
+    let mut parser = all_consuming(separated_listn(
+        tag("-"),
+        pair(opt_flag(tag(">")), ws(ident)),
+        3,
+    ));
 
-    let mut s = s.replace("→", "->");
-
-    if !RE.is_match(&s) {
+    let Ok((_, results)) = parser(&s) else {
         return Err(());
-    }
+    };
 
     let mut cmds = Vec::new();
+    let mut results = results.into_iter();
 
     // Starting M (Move) command
     {
-        let c = MOVE.captures(&s).unwrap();
-        cmds.push(PathCmd::Move(c[1].to_string()));
-        s = s.split_off(c.len())
+        let (_, p) = results.next().unwrap();
+        cmds.push(PathCmd::Move(p.to_string()));
     }
 
     let mut points = Vec::new();
-    for p in s.split("-") {
-        if !p.starts_with(">") {
-            points.push(p.trim());
+    for (end, p) in results {
+        points.push(p);
+        if !end {
             continue;
         }
-        points.push(p[1..].trim());
         cmds.push(match points.len() {
             0 => unreachable!(),
             1 => PathCmd::Line(points[0].to_string()),

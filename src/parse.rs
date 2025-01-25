@@ -3,7 +3,10 @@ use crate::{
         constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
         elements::{Angle, Distance},
         Constraint,
-    }, draw::parse_path, math::vector::Number, order::PointIndex
+    },
+    draw::parse_path,
+    math::vector::Number,
+    order::PointIndex,
 };
 
 pub fn parse_document(doc: String) -> Result<PointIndex, String> {
@@ -37,7 +40,10 @@ pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
     Err(())
 }
 
-pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_constraint(
+    line: &str,
+    index: &mut PointIndex,
+) -> Result<Vec<Box<dyn Constraint>>, String> {
     if let Ok(parsed) = Parallel::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
@@ -56,7 +62,10 @@ pub fn parse_constraint(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dy
     Err(format!("failed to parse constraint {line}"))
 }
 
-pub fn parse_equality(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn Constraint>>, String> {
+pub fn parse_equality(
+    line: &str,
+    index: &mut PointIndex,
+) -> Result<Vec<Box<dyn Constraint>>, String> {
     enum Element {
         D(Distance),
         A(Angle),
@@ -102,4 +111,80 @@ pub fn parse_equality(line: &str, index: &mut PointIndex) -> Result<Vec<Box<dyn 
             }
         })
         .collect())
+}
+
+use nom::{
+    bytes::complete::take_while1, character::complete::space0, combinator::verify,
+    error::ParseError, multi::separated_list0, sequence::delimited, IResult, Parser,
+};
+
+pub fn ws<'a, O, E: ParseError<&'a str>, F>(
+    inner: F,
+) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
+where
+    F: Parser<&'a str, O, E>,
+{
+    delimited(space0, inner, space0)
+}
+
+pub fn ident(s: &str) -> IResult<&str, &str, ()> {
+    take_while1(char::is_alphabetic)(s)
+}
+
+pub fn list_len<I, O, O2, E, F, G>(
+    sep: G,
+    f: F,
+    len: usize,
+) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
+where
+    I: Clone + nom::InputLength,
+    F: Parser<I, O, E>,
+    G: Parser<I, O2, E>,
+    E: ParseError<I>,
+{
+    verify(separated_list0(sep, f), move |l: &Vec<O>| l.len() == len)
+}
+
+pub fn separated_listn<I, O, O2, E, F, G>(
+    sep: G,
+    f: F,
+    len: usize,
+) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
+where
+    I: Clone + nom::InputLength,
+    F: Parser<I, O, E>,
+    G: Parser<I, O2, E>,
+    E: ParseError<I>,
+{
+    verify(separated_list0(sep, f), move |l: &Vec<O>| l.len() >= len)
+}
+
+pub fn flag<I, O, O2, E, F, G>(mut f: F, mut g: G) -> impl FnMut(I) -> IResult<I, bool, E>
+where
+    I: Clone,
+    F: Parser<I, O, E>,
+    G: Parser<I, O2, E>,
+    E: ParseError<I>,
+{
+    move |s| {
+        if let Ok((i, _)) = f.parse(s.clone()) {
+            return IResult::Ok((i, true));
+        }
+        g.parse(s).map(|(i, _)| (i, false))
+    }
+}
+
+pub fn opt_flag<I, O, E, F>(mut f: F) -> impl FnMut(I) -> IResult<I, bool, E>
+where
+    I: Clone,
+    F: Parser<I, O, E>,
+    E: ParseError<I>,
+{
+    move |s| {
+        IResult::Ok(if let Ok((i, _)) = f.parse(s.clone()) {
+            (i, true)
+        } else {
+            (s, false)
+        })
+    }
 }
