@@ -13,7 +13,7 @@ use gsolve::util::print_header;
 fn main() -> Result<(), String> {
     let mut file_path = String::new();
     let mut verbose = true;
-    let mut output: draw::Output = draw::Output::None;
+    let mut output: Option<draw::Output> = None;
 
     {
         let mut parser = ArgumentParser::new();
@@ -40,17 +40,17 @@ fn main() -> Result<(), String> {
             .refer(&mut output)
             .add_option(
                 &["--no_out", "--output_none"],
-                argparse::StoreConst(draw::Output::None),
+                argparse::StoreConst(None),
                 "Do not output to a file",
             )
             .add_option(
                 &["--csv", "--csv_out", "--output_csv"],
-                argparse::StoreConst(draw::Output::CSV),
+                argparse::StoreConst(Some(draw::Output::CSV)),
                 "Output to CSV",
             )
             .add_option(
                 &["--svg", "--svg_out", "--output_svg"],
-                argparse::StoreConst(draw::Output::SVG),
+                argparse::StoreConst(Some(draw::Output::SVG)),
                 "Output to SVG",
             )
             .add_option(
@@ -58,7 +58,7 @@ fn main() -> Result<(), String> {
                     "--term", "--term_out", "--output_term",
                     "--terminal", "--terminal_out", "--output_terminal"
                 ],
-                argparse::StoreConst(draw::Output::Terminal),
+                argparse::StoreConst(Some(draw::Output::Terminal)),
                 "Display in terminal",
             );
 
@@ -68,6 +68,7 @@ fn main() -> Result<(), String> {
     let contents = fs::read_to_string(file_path).map_err(|e| format!("{e}"))?;
 
     let mut index = parse_document(contents)?;
+    index.draw.output = output;
 
     if verbose {
         print_header("Constraints");
@@ -98,21 +99,22 @@ fn main() -> Result<(), String> {
             }
         }
     }
-    match output {
-        draw::Output::None => {}
-        draw::Output::CSV => {
-            let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
-            for (point, pos) in positions.iter() {
-                csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
-                    .map_err(|e| e.to_string())?;
+    if let Some(output) = index.draw.output {
+        match output {
+            draw::Output::CSV => {
+                let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
+                for (point, pos) in positions.iter() {
+                    csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
+                        .map_err(|e| e.to_string())?;
+                }
             }
-        }
-        draw::Output::SVG => {
-            draw_svg(positions, &index).map_err(|e| e.to_string())?;
-        }
-        draw::Output::Terminal => {
-            print_header("Figure");
-            draw_terminal(positions, &index);
+            draw::Output::SVG => {
+                draw_svg(positions, &index).map_err(|e| e.to_string())?;
+            }
+            draw::Output::Terminal => {
+                print_header("Figure");
+                draw_terminal(positions, &index);
+            }
         }
     }
 

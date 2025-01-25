@@ -12,10 +12,14 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 pub enum Output {
-    None,
     CSV,
     Terminal,
     SVG,
+}
+#[derive(Debug, Clone, Default)]
+pub struct DrawOptions {
+    pub output: Option<Output>,
+    pub paths: Vec<Vec<PathCmd>>,
 }
 
 pub fn draw_terminal(mut positions: HashMap<Point, Vector>, index: &PointIndex) {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{constraints::{elements::Point, Constraint}, draw::PathCmd};
+use crate::{constraints::{elements::Point, Constraint}, draw::{DrawOptions, PathCmd}};
 
 mod bfs;
 pub use bfs::bfs_order;
@@ -14,7 +14,7 @@ pub struct PointIndex {
     id2p: BiHashMap<PointID, Point>,
     id2c: HashMap<PointID, Vec<CID>>,
     constraints: Vec<Box<dyn Constraint>>,
-    paths: Vec<Vec<PathCmd>>,
+    pub draw: DrawOptions,
 }
 
 impl PointIndex {
@@ -37,11 +37,11 @@ impl PointIndex {
     }
     
     pub fn add_path(&mut self, path: Vec<PathCmd>) {
-        self.paths.push(path);
+        self.draw.paths.push(path);
     }
 
     pub fn paths(&self) -> &[Vec<PathCmd>] {
-        &self.paths
+        &self.draw.paths
     }
 
     pub fn constraints(&self) -> &[Box<dyn Constraint>] {
