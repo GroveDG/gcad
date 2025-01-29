@@ -1,13 +1,6 @@
 use std::{collections::HashSet, fmt::Display};
 
 use itertools::Itertools;
-use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::space1,
-    combinator::all_consuming,
-    sequence::{pair, terminated},
-};
 
 use crate::{
     math::{
@@ -15,7 +8,9 @@ use crate::{
         Number, Vector,
     },
     order::{PointID, PointIndex},
-    parse::{flag, ident, list_len, separated_listn, ws},
+    parsing::{
+        after, before, delimited_list, flag, ident, inner, next_str, one_of, opt_ws, pair, ws,
+    },
 };
 
 use super::{ConFlags, Constraint};
@@ -41,12 +36,13 @@ impl Display for Parallel {
 
 impl Constraint for Parallel {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(separated_listn(
-            alt((tag("∥"), tag("||"))),
-            ws(list_len(space1, ident, 2)),
+        let parser = delimited_list(
+            one_of(vec![next_str("∥"), next_str("||")]),
+            inner(opt_ws, delimited_list(ws, ident, 2, 2), opt_ws),
             2,
-        )));
-        let Ok((_, points)) = parser(s) else {
+            usize::MAX,
+        );
+        let Some((_, points)) = parser(s) else {
             return Err(());
         };
         Ok(Self {
@@ -129,12 +125,13 @@ impl Display for Perpendicular {
 
 impl Constraint for Perpendicular {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(separated_listn(
-            alt((tag("⟂"), tag("_|_"))),
-            ws(list_len(space1, ident, 2)),
+        let parser = delimited_list(
+            one_of(vec![next_str("⟂"), next_str("_|_")]),
+            inner(opt_ws, delimited_list(ws, ident, 2, 2), opt_ws),
             2,
-        )));
-        let Ok((_, points)) = parser(s) else {
+            usize::MAX,
+        );
+        let Some((_, points)) = parser(s) else {
             return Err(());
         };
         Ok(Self {
@@ -214,8 +211,8 @@ impl Display for Collinear {
 
 impl Constraint for Collinear {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(separated_listn(tag("-"), ws(ident), 3)));
-        let Ok((_, points)) = parser(s) else {
+        let parser = delimited_list(next_str("-"), inner(opt_ws, ident, opt_ws), 3, usize::MAX);
+        let Some((_, points)) = parser(s) else {
             return Err(());
         };
         Ok(Self {
@@ -304,21 +301,22 @@ impl Display for AnglePolarity {
 
 impl Constraint for AnglePolarity {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(separated_listn(
-            tag(","),
-            ws(pair(
-                terminated(
-                    ws(flag(
-                        alt((tag("±"), tag("+/-"))),
-                        alt((tag("∓"), tag("-/+"))),
-                    )),
-                    ws(alt((tag("<"), tag("∠")))),
+        let parser = delimited_list(
+            before(next_str(","), opt_ws),
+            pair(
+                before(
+                    flag(
+                        one_of(vec![next_str("±"), next_str("+/-")]),
+                        one_of(vec![next_str("∓"), next_str("-/+")]),
+                    ),
+                    after(opt_ws, one_of(vec![next_str("<"), next_str("∠")])),
                 ),
-                ws(list_len(space1, ident, 3)),
-            )),
+                inner(opt_ws, delimited_list(ws, ident, 3, 3), opt_ws),
+            ),
             2,
-        )));
-        let Ok((_, points)) = parser(s) else {
+            usize::MAX,
+        );
+        let Some((_, points)) = parser(s) else {
             return Err(());
         };
         let (polarities, points): (Vec<Polarity>, Vec<[PointID; 3]>) = points

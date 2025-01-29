@@ -5,3 +5,4 @@ pub mod parse;
 pub mod solve;
 pub mod draw;
 pub mod util;
+pub(crate) mod parsing;

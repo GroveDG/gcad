@@ -1,19 +1,15 @@
 use std::{collections::HashSet, fmt::Display};
 
 use itertools::Itertools;
-use nom::{
-    character::complete::{char as nom_char, one_of, space1},
-    combinator::all_consuming,
-    sequence::{delimited, preceded},
-};
 
 use crate::{
     constraints::Constraint,
     math::{
-        geo::{Geo, OneD}, AboutEq as _, Number, Vector
+        geo::{Geo, OneD},
+        AboutEq as _, Number, Vector,
     },
     order::{PointID, PointIndex},
-    parse::{ident, list_len, ws},
+    parsing::{after, delimited_list, ident, inner, next_char, one_of, ws},
 };
 
 pub type Point = String;
@@ -32,12 +28,12 @@ impl Display for Distance {
 
 impl Constraint for Distance {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(delimited(
-            nom_char::<&str, ()>('|'),
-            ws(list_len(space1, ident, 2)),
-            nom_char::<&str, ()>('|'),
-        )));
-        let Ok((_, p)) = parser(s) else {
+        let parser = inner(
+            next_char('|'),
+            delimited_list(ws, ident, 2, 2),
+            next_char('|'),
+        );
+        let Some((_, p)) = parser(s) else {
             return Err(());
         };
         Ok(Self {
@@ -94,11 +90,11 @@ impl Display for Angle {
 
 impl Constraint for Angle {
     fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let mut parser = all_consuming(ws(preceded(
-            one_of::<&str, &[char], ()>(&['<', '∠']),
-            ws(list_len(space1, ident, 3)),
-        )));
-        let Ok((_, p)) = parser(s) else {
+        let parser = after(
+            one_of(vec![next_char('<'), next_char('∠')]),
+            delimited_list(ws, ident, 3, 3),
+        );
+        let Some((_, p)) = parser(s) else {
             return Err(());
         };
         Ok(Self {

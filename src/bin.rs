@@ -73,7 +73,7 @@ fn main() -> Result<(), String> {
     if verbose {
         print_header("Constraints");
         for c in index.constraints() {
-            println!("{}", c);
+            println!("{:?}", c);
         }
     }
 

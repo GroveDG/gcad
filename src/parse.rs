@@ -76,6 +76,7 @@ pub fn parse_equality(
     let mut value = None;
     let mut elements: Vec<Element> = Vec::new();
     for expr in line.split("=") {
+        let expr = expr.trim();
         if let Ok(parsed) = Distance::parse(expr, index) {
             elements.push(Element::D(parsed));
             continue;
@@ -84,7 +85,7 @@ pub fn parse_equality(
             elements.push(Element::A(parsed));
             continue;
         }
-        if let Ok(parsed) = expr.trim().parse::<Number>() {
+        if let Ok(parsed) = expr.parse::<Number>() {
             if value.is_some() {
                 return Err("multiple values in equality".to_string());
             }
@@ -111,80 +112,4 @@ pub fn parse_equality(
             }
         })
         .collect())
-}
-
-use nom::{
-    bytes::complete::take_while1, character::complete::space0, combinator::verify,
-    error::ParseError, multi::separated_list0, sequence::delimited, IResult, Parser,
-};
-
-pub fn ws<'a, O, E: ParseError<&'a str>, F>(
-    inner: F,
-) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
-where
-    F: Parser<&'a str, O, E>,
-{
-    delimited(space0, inner, space0)
-}
-
-pub fn ident(s: &str) -> IResult<&str, &str, ()> {
-    take_while1(char::is_alphabetic)(s)
-}
-
-pub fn list_len<I, O, O2, E, F, G>(
-    sep: G,
-    f: F,
-    len: usize,
-) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
-where
-    I: Clone + nom::InputLength,
-    F: Parser<I, O, E>,
-    G: Parser<I, O2, E>,
-    E: ParseError<I>,
-{
-    verify(separated_list0(sep, f), move |l: &Vec<O>| l.len() == len)
-}
-
-pub fn separated_listn<I, O, O2, E, F, G>(
-    sep: G,
-    f: F,
-    len: usize,
-) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
-where
-    I: Clone + nom::InputLength,
-    F: Parser<I, O, E>,
-    G: Parser<I, O2, E>,
-    E: ParseError<I>,
-{
-    verify(separated_list0(sep, f), move |l: &Vec<O>| l.len() >= len)
-}
-
-pub fn flag<I, O, O2, E, F, G>(mut f: F, mut g: G) -> impl FnMut(I) -> IResult<I, bool, E>
-where
-    I: Clone,
-    F: Parser<I, O, E>,
-    G: Parser<I, O2, E>,
-    E: ParseError<I>,
-{
-    move |s| {
-        if let Ok((i, _)) = f.parse(s.clone()) {
-            return IResult::Ok((i, true));
-        }
-        g.parse(s).map(|(i, _)| (i, false))
-    }
-}
-
-pub fn opt_flag<I, O, E, F>(mut f: F) -> impl FnMut(I) -> IResult<I, bool, E>
-where
-    I: Clone,
-    F: Parser<I, O, E>,
-    E: ParseError<I>,
-{
-    move |s| {
-        IResult::Ok(if let Ok((i, _)) = f.parse(s.clone()) {
-            (i, true)
-        } else {
-            (s, false)
-        })
-    }
 }

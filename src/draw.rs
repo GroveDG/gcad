@@ -1,12 +1,11 @@
 use std::{collections::HashMap, fs::File, io::Write};
 
-use nom::{bytes::complete::tag, combinator::all_consuming, sequence::pair};
 use rsille::Canvas;
 
 use crate::{
     constraints::elements::Point,
     math::{bounding_box, Number, Vector},
-    order::PointIndex, parse::{ident, opt_flag, separated_listn, ws},
+    order::PointIndex, parsing::{delimited_list, ident, next_char, opt_flag, pair},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -140,13 +139,14 @@ pub enum PathCmd {
 pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
     let s = s.replace("→", "->");
 
-    let mut parser = all_consuming(separated_listn(
-        tag("-"),
-        pair(opt_flag(tag(">")), ws(ident)),
-        3,
-    ));
+    let parser = delimited_list(
+        next_char('-'),
+        pair(opt_flag(next_char('>')), ident),
+        2,
+        usize::MAX
+    );
 
-    let Ok((_, results)) = parser(&s) else {
+    let Some((_, results)) = parser(&s) else {
         return Err(());
     };
 
