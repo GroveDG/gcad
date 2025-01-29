@@ -17,7 +17,7 @@ impl Default for ConFlags {
 use bitflags::bitflags;
 
 use crate::{
-    math::{geo::Geo, vector::Vector},
+    math::{geo::Geo, Vector},
     order::{PointID, PointIndex},
 };
 

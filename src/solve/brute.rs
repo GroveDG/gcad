@@ -4,7 +4,7 @@ use crate::{
     constraints::elements::Point,
     math::{
         geo::{choose, meet, Geo, TwoD},
-        vector::Vector,
+        Vector,
     },
     order::{PointIndex, CID},
     util::locate,

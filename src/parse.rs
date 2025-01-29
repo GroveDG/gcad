@@ -5,7 +5,7 @@ use crate::{
         Constraint,
     },
     draw::parse_path,
-    math::vector::Number,
+    math::Number,
     order::PointIndex,
 };
 

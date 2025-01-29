@@ -1,21 +1,6 @@
 use std::{fmt::Display, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign}};
 
-pub trait AboutEq {
-    fn about_eq(self, v: Self) -> bool;
-    fn about_zero(self) -> bool;
-}
-
-pub type Number = f64;
-pub const EPSILON: Number = 1e-9;
-
-impl AboutEq for Number {
-    fn about_eq(self, v: Self) -> bool {
-        (v - self).abs() <= EPSILON
-    }
-    fn about_zero(self) -> bool {
-        self.abs() <= EPSILON
-    }
-}
+use super::{AboutEq, Number};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vector {

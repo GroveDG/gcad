@@ -1,5 +1,7 @@
-use crate::math::vector::{AboutEq, Number, Vector};
+use crate::math::vector::Vector;
 use itertools::Itertools;
+
+use super::{AboutEq, Number};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TwoD {
@@ -28,13 +30,13 @@ pub fn line_from_points(p0: Vector, p1: Vector, l: Number) -> OneD {
     }
 }
 
-pub fn closest_linear(o: Vector, v: Vector, l: Number, p: Vector) -> Vector {
+fn closest_linear(o: Vector, v: Vector, l: Number, p: Vector) -> Vector {
     let mut t = (p - o).dot(v);
     t = Number::max(t, l);
     along_linear(o, v, t)
 }
 
-pub fn along_linear(o: Vector, v: Vector, t: Number) -> Vector {
+fn along_linear(o: Vector, v: Vector, t: Number) -> Vector {
     o + v * t
 }
 
@@ -45,7 +47,7 @@ pub fn meet(g0: Vec<Geo>, g1: Vec<Geo>) -> Vec<Geo> {
         .concat()
 }
 
-pub fn intersect(g0: Geo, g1: Geo) -> Vec<Geo> {
+fn intersect(g0: Geo, g1: Geo) -> Vec<Geo> {
     match (g0, g1) {
         (g, Geo::Zero(p)) | (Geo::Zero(p), g) => { 
             if dist(p, g).about_zero() {

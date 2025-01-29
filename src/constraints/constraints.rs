@@ -12,7 +12,7 @@ use nom::{
 use crate::{
     math::{
         geo::{line_from_points, Geo, OneD, TwoD},
-        vector::{Number, Vector},
+        Number, Vector,
     },
     order::{PointID, PointIndex},
     parse::{flag, ident, list_len, separated_listn, ws},

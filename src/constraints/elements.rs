@@ -10,8 +10,7 @@ use nom::{
 use crate::{
     constraints::Constraint,
     math::{
-        geo::{Geo, OneD},
-        vector::{AboutEq, Number, Vector},
+        geo::{Geo, OneD}, AboutEq as _, Number, Vector
     },
     order::{PointID, PointIndex},
     parse::{ident, list_len, ws},

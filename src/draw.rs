@@ -5,7 +5,7 @@ use rsille::Canvas;
 
 use crate::{
     constraints::elements::Point,
-    math::vector::{bounding_box, Number, Vector},
+    math::{bounding_box, Number, Vector},
     order::PointIndex, parse::{ident, opt_flag, separated_listn, ws},
 };
 
