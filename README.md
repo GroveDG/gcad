@@ -51,6 +51,7 @@ Constraints whose possibility space is a 2D element (area) are applied only to s
 
 # TODO
 
+- Math
 - Figure orientation
 - Figure positioning
 - Cropping undrawn points

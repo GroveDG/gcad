@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs::File, io::Write};
 
+use clap_derive::ValueEnum;
 use rsille::Canvas;
 
 use crate::{
@@ -8,10 +9,13 @@ use crate::{
     order::PointIndex, parsing::{delimited_list, ident, next_char, opt_flag, pair},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Output {
-    CSV,
+    /// Prints figure.
     Terminal,
+    /// Saves points as CSV.
+    CSV,
+    /// Saves figure as SVG.
     SVG,
 }
 #[derive(Debug, Clone, Default)]

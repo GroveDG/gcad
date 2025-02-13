@@ -10,7 +10,7 @@ pub(crate) fn locate<'a, T: PartialEq>(
     None
 }
 
-pub fn print_header(s: &str) {
+pub fn print_heading(s: &str) {
     let style = { ansi_term::Style::new().underline() };
     println!(
         "\n\n{}\n",
