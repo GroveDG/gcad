@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use clap::Parser;
 use clap_derive::ValueEnum;
 use gsolve::document::{order_bfs, solve_brute, draw_svg, draw_terminal, Document};
-use gsolve::util::print_heading;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Output {
@@ -87,4 +86,19 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+pub fn print_heading(s: &str) {
+    let style = { ansi_term::Style::new().underline() };
+    println!(
+        "\n\n{}\n",
+        style.paint(
+            [
+                s,
+                " ".repeat(term_size::dimensions().unwrap().0 - s.len())
+                    .as_str(),
+            ]
+            .concat()
+        )
+    );
 }

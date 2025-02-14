@@ -1,3 +1,3 @@
-pub mod math;
+mod math;
+mod util;
 pub mod document;
-pub mod util;
