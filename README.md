@@ -47,8 +47,14 @@ with Collinear and Chirality.
 Collinear states that all specified points are on the same line. Any two points are collinear by definition, so Collinear constraints must have at least 3 points.
 
 Chirality states that all specified angles marked with "±" or "+/-" (Pro) have the opposite sign from angles marked with "∓" or "-/+" (Anti). Since GCAD does not use signed angles, this is used to relate the directions of angles.
-- For example, all interior angles of a convex polygon have the same sign and any exterior angles have the oppsoite sign.
+- For example, all interior angles of a convex polygon have the same sign and any exterior angles have the opposite sign.
 ## Drawing
+How drawing is implemented is dependent on the output format. GCAD drawing is intended for use with SVG and compatible path standards.
+
+A path is drawn by chaining path segments together.
+- For example, "A→B" draws a line from A to B, "B→C" draws a line from B to C, "A→B→C" draws a line from A to B to C.
+
+If a path ends where it begins, the path should be closed if possible.
 
 # Solving
 
