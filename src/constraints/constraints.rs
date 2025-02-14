@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display};
+use std::fmt::Display;
 
 use itertools::Itertools;
 
@@ -66,36 +66,17 @@ impl Constraint for Parallel {
         &mut self.points
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if let Some(_) = self
-            .points
-            .chunks_exact(2)
-            .into_iter()
-            .filter(|l| known_points.contains(&l[0]) && known_points.contains(&l[1]))
-            .next()
-        {
-            self.points
-                .chunks_exact(2)
-                .filter_map(|l| {
-                    if !known_points.contains(&l[0]) && known_points.contains(&l[1]) {
-                        Some(l[0])
-                    } else if !known_points.contains(&l[1]) && known_points.contains(&l[0]) {
-                        Some(l[1])
-                    } else {
-                        None
-                    }
-                })
-                .collect()
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID> {
+        if contained_elements(&self.points, &contains, 2).count() >= 1 {
+            targets(&self.points, &contains, 2)
         } else {
             vec![]
         }
     }
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
-        let l = self
-            .points
-            .chunks_exact(2)
-            .filter(|&l| pos.len() > l[0] && pos.len() > l[1])
+        let binding = |p| p < pos.len();
+        let (_, l) = contained_elements(&self.points, &binding, 2)
             .next()
             .unwrap();
         let v = (pos[l[1]] - pos[l[0]]).unit();
@@ -161,36 +142,17 @@ impl Constraint for Perpendicular {
         &mut self.points
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if let Some(_) = self
-            .points
-            .chunks_exact(2)
-            .filter(|&l| known_points.contains(&l[0]) && known_points.contains(&l[1]))
-            .next()
-        {
-            self.points
-                .chunks_exact(2)
-                .filter_map(|l| {
-                    if !known_points.contains(&l[0]) && known_points.contains(&l[1]) {
-                        Some(l[0])
-                    } else if !known_points.contains(&l[1]) && known_points.contains(&l[0]) {
-                        Some(l[1])
-                    } else {
-                        None
-                    }
-                })
-                .collect()
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID> {
+        if contained_elements(&self.points, &contains, 2).count() >= 1 {
+            targets(&self.points, &contains, 2)
         } else {
             vec![]
         }
     }
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
-        let (ind, l) = self
-            .points
-            .chunks_exact(2)
-            .enumerate()
-            .filter(|&(_, l)| pos.len() > l[0] && pos.len() > l[1])
+        let binding = |p| p < pos.len();
+        let (ind, l) = contained_elements(&self.points, &binding, 2)
             .next()
             .unwrap();
         let v = (pos[l[1]] - pos[l[0]]).unit();
@@ -248,40 +210,28 @@ impl Constraint for Collinear {
         &mut self.points
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if self
-            .points
-            .iter()
-            .filter(|&p| known_points.contains(p))
-            .count()
-            >= 2
-        {
-            self.points
-                .iter()
-                .copied()
-                .filter(|p| !known_points.contains(p))
-                .collect()
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID> {
+        if contained_elements(&self.points, &contains, 1).count() >= 2 {
+            targets(&self.points, &contains, 1)
         } else {
-            vec![]
+            Vec::new()
         }
     }
 
     fn geo(&self, pos: &[Vector], _t_ind: usize) -> Vec<Geo> {
-        let [&p0, &p1] = self
-            .points
-            .iter()
-            .filter(|&&p| pos.len() > p)
-            .next_array()
-            .unwrap();
+        let binding = |p| p < pos.len();
+        let mut contained = contained_elements(&self.points, &binding, 1);
+        let (_, p0) = contained.next().unwrap();
+        let (_, p1) = contained.next().unwrap();
         vec![Geo::One(line_from_points(
-            pos[p0],
-            pos[p1],
+            pos[p0[0]],
+            pos[p1[0]],
             Number::NEG_INFINITY,
         ))]
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Polarity {
     Pro,
     Anti,
@@ -371,43 +321,25 @@ impl Constraint for AnglePolarity {
         &mut self.points
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if self
-            .points
-            .chunks_exact(3)
-            .filter(|&a| a.iter().all(|p| known_points.contains(p)))
-            .next()
-            .is_some()
-        {
-            self.points
-                .chunks_exact(3)
-                .filter_map(|a| {
-                    a.iter()
-                        .filter(|p| !known_points.contains(p))
-                        .exactly_one()
-                        .ok()
-                })
-                .copied()
-                .collect()
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID> {
+        if contained_elements(&self.points, &contains, 3).count() >= 1 {
+            targets(&self.points, &contains, 3)
         } else {
             Vec::new()
         }
     }
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
-        let Some((a, pol)) = self
-            .points
-            .chunks_exact(3)
-            .zip(self.polarities.iter())
-            .filter(|&(a, _)| a.iter().all(|&p| pos.len() > p))
+        let binding = |p| p < pos.len();
+        let (ind, a) = contained_elements(&self.points, &binding, 3)
             .next()
-        else {
-            return Vec::new();
-        };
+            .unwrap();
+        let pol = self.polarities[ind];
+
         let t_a_ind = t_ind / 3;
         let t_i = t_ind % 3;
         let t_a = &self.points[t_a_ind * 3..(t_a_ind + 1) * 3];
-        let t_pol = &self.polarities[t_a_ind];
+        let t_pol = self.polarities[t_a_ind];
 
         let dir = (pos[a[1]] - pos[a[0]])
             .cross(pos[a[2]] - pos[a[1]])
@@ -426,4 +358,40 @@ impl Constraint for AnglePolarity {
     fn flags(&self) -> ConFlags {
         ConFlags::empty()
     }
+}
+
+pub(super) fn contained_elements<'a>(
+    points: &'a [PointID],
+    contains: &'a dyn Fn(PointID) -> bool,
+    n: usize,
+) -> impl Iterator<Item = (usize, &'a [PointID])> {
+    points
+        .chunks_exact(n)
+        .enumerate()
+        .filter(move |(_, element)| element.iter().all(|p| contains(*p)))
+}
+
+pub(super) fn partial_elements<'a>(
+    points: &'a [PointID],
+    contains: &'a dyn Fn(PointID) -> bool,
+    n: usize,
+) -> impl Iterator<Item = (usize, &'a [PointID])> {
+    points.chunks_exact(n).filter_map(move |element| {
+        let idx = element
+            .iter()
+            .positions(|p| !contains(*p))
+            .exactly_one()
+            .ok()?;
+        Some((idx, element))
+    })
+}
+
+pub(super) fn targets<'a>(
+    points: &'a [PointID],
+    contains: &'a dyn Fn(PointID) -> bool,
+    n: usize,
+) -> Vec<PointID> {
+    partial_elements(points, contains, n)
+        .map(|(idx, points)| points[idx])
+        .collect()
 }

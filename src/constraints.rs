@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    fmt::{Debug, Display},
-};
+use std::fmt::{Debug, Display};
 
 bitflags! {
     pub struct ConFlags: u8 {
@@ -56,7 +53,7 @@ pub trait Constraint: Debug + Display {
     ///
     /// An empty [`Vec`] should be returned if the constraint cannot be
     /// applied.
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID>;
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID>;
 
     /// Returns the geometry representing the constraint's possibility
     /// space.

@@ -1,6 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
-    iter::repeat,
+    collections::{HashMap, HashSet}, hash::RandomState, iter::repeat
 };
 
 use itertools::Itertools;
@@ -20,7 +19,7 @@ fn expand_tree<'a>(
     let mut new_points = Vec::new();
     for &cid in index.get_cids(&point) {
         let c = index.get_constraint(cid);
-        for t in c.targets(&points) {
+        for t in c.targets(&|p| points.contains(&p)) {
             if !support.contains_key(&t) {
                 support.insert(t, Vec::new());
             }
@@ -88,13 +87,13 @@ fn compute_tree<'a>(
 fn root_pairs<'a>(index: &'a PointIndex) -> impl Iterator<Item = (PointID, PointID)> {
     let mut neighbors: HashMapSet<PointID, PointID> = HashMap::new();
     for p in index.ids() {
-        let known_points = HashSet::from_iter([*p]);
+        let known_points: HashSet<PointID, RandomState> = HashSet::from_iter([*p]);
         let n = HashSet::from_iter(
             index
                 .get_cids(p)
                 .iter()
                 .map(|&cid| index.get_constraint(cid))
-                .map(|c| c.targets(&known_points))
+                .map(|c| c.targets(&|p| known_points.contains(&p)))
                 .flatten()
                 .unique()
                 .filter(|t| neighbors.get(t).is_none_or(|t_n| !t_n.contains(&p))),

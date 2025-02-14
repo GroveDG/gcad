@@ -1,6 +1,4 @@
-use std::{collections::HashSet, fmt::Display};
-
-use itertools::Itertools;
+use std::fmt::Display;
 
 use crate::{
     constraints::Constraint,
@@ -11,6 +9,8 @@ use crate::{
     order::{PointID, PointIndex},
     parsing::{literal, space, word},
 };
+
+use super::constraints::targets;
 
 pub type Point = String;
 
@@ -51,17 +51,8 @@ impl Constraint for Distance {
         self.points.as_mut_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if let Ok(&t) = self
-            .points
-            .iter()
-            .filter(|&p| !known_points.contains(p))
-            .exactly_one()
-        {
-            vec![t]
-        } else {
-            Vec::new()
-        }
+    fn targets(&self, contains: &dyn Fn(PointID) -> bool) -> Vec<PointID> {
+        targets(&self.points, contains, 2)
     }
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
@@ -118,17 +109,8 @@ impl Constraint for Angle {
         self.points.as_mut_slice()
     }
 
-    fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID> {
-        if let Ok(&t) = self
-            .points
-            .iter()
-            .filter(|&p| !known_points.contains(p))
-            .exactly_one()
-        {
-            vec![t]
-        } else {
-            Vec::new()
-        }
+    fn targets(&self, contains: &dyn Fn(usize) -> bool) -> Vec<PointID> {
+        targets(&self.points, contains, 3)
     }
 
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo> {
