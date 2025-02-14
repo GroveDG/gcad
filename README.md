@@ -52,7 +52,9 @@ Chirality states that all specified angles marked with "±" or "+/-" (Pro) have 
 How drawing is implemented is dependent on the output format. GCAD drawing is intended for use with SVG and compatible path standards.
 
 A path is drawn by chaining path segments together.
-- For example, "A→B" draws a line from A to B, "B→C" draws a line from B to C, "A→B→C" draws a line from A to B to C.
+- For example, "A→B" or "A->B" draws a line from A to B, "B→C" or "B->C" draws a line from B to C, "A→B→C" or "A->B->C" draws a line from A to B to C.
+## Comments
+Anything enclosed in double quotes (") is commented out. This mirrors document writing where text is presumed to be plain unless it is enclosed in a math field. Here text is presumed to be math unless it is enclosed in a text field (quotes).
 
 If a path ends where it begins, the path should be closed if possible.
 
