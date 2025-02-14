@@ -24,56 +24,6 @@ struct CLIArgs {
 fn main() -> Result<(), String> {
     let args = CLIArgs::parse();
 
-    // {
-    //     let mut parser = ArgumentParser::new();
-
-    //     parser
-    //         .refer(&mut file_path)
-    //         .add_argument("file_path", argparse::Store, "Path to gcad file")
-    //         .required();
-
-    //     parser
-    //         .refer(&mut verbose)
-    //         .add_option(
-    //             &["-s", "--silent"],
-    //             argparse::StoreFalse,
-    //             "Hide result print outs",
-    //         )
-    //         .add_option(
-    //             &["-v", "--verbose"],
-    //             argparse::StoreTrue,
-    //             "Print out results",
-    //         );
-
-    //     parser
-    //         .refer(&mut output)
-    //         .add_option(
-    //             &["--no_out", "--output_none"],
-    //             argparse::StoreConst(None),
-    //             "Do not output to a file",
-    //         )
-    //         .add_option(
-    //             &["--csv", "--csv_out", "--output_csv"],
-    //             argparse::StoreConst(Some(draw::Output::CSV)),
-    //             "Output to CSV",
-    //         )
-    //         .add_option(
-    //             &["--svg", "--svg_out", "--output_svg"],
-    //             argparse::StoreConst(Some(draw::Output::SVG)),
-    //             "Output to SVG",
-    //         )
-    //         .add_option(
-    //             &[
-    //                 "--term", "--term_out", "--output_term",
-    //                 "--terminal", "--terminal_out", "--output_terminal"
-    //             ],
-    //             argparse::StoreConst(Some(draw::Output::Terminal)),
-    //             "Display in terminal",
-    //         );
-
-    //     parser.parse_args_or_exit();
-    // }
-
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
     let mut index = parse_document(contents)?;

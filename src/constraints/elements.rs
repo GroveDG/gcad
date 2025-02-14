@@ -9,7 +9,7 @@ use crate::{
         AboutEq as _, Number, Vector,
     },
     order::{PointID, PointIndex},
-    parsing::{after, delimited_list, ident, inner, next_char, one_of, ws},
+    parsing::{literal, space, word},
 };
 
 pub type Point = String;
@@ -27,17 +27,18 @@ impl Display for Distance {
 }
 
 impl Constraint for Distance {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = inner(
-            next_char('|'),
-            delimited_list(ws, ident, 2, 2),
-            next_char('|'),
-        );
-        let Some((_, p)) = parser(s) else {
-            return Err(());
-        };
-        Ok(Self {
-            points: [index.get_or_insert(p[0]), index.get_or_insert(p[1])],
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        literal("|")(&mut input)?;
+        space(&mut input);
+        let a = word(&mut input)?;
+        space(&mut input)?;
+        let b = word(&mut input)?;
+        space(&mut input);
+        literal("|")(&mut input)?;
+
+        let points = [index.get_or_insert(a), index.get_or_insert(b)];
+        Some(Self {
+            points,
             dist: 0.0, // Placeholder value
         })
     }
@@ -89,20 +90,22 @@ impl Display for Angle {
 }
 
 impl Constraint for Angle {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = after(
-            one_of(vec![next_char('<'), next_char('∠')]),
-            delimited_list(ws, ident, 3, 3),
-        );
-        let Some((_, p)) = parser(s) else {
-            return Err(());
-        };
-        Ok(Self {
-            points: [
-                index.get_or_insert(p[0]),
-                index.get_or_insert(p[1]),
-                index.get_or_insert(p[2]),
-            ],
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        literal("∠")(&mut input).or(literal("<")(&mut input))?;
+        space(&mut input);
+        let a = word(&mut input)?;
+        space(&mut input)?;
+        let b = word(&mut input)?;
+        space(&mut input)?;
+        let c = word(&mut input)?;
+
+        let points = [
+            index.get_or_insert(a),
+            index.get_or_insert(b),
+            index.get_or_insert(c),
+        ];
+        Some(Self {
+            points,
             measure: 0.0, // Placeholder value
         })
     }

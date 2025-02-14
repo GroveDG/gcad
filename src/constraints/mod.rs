@@ -25,27 +25,27 @@ pub mod constraints;
 pub mod elements;
 
 pub trait Constraint: Debug + Display {
-    /// Determine if `s` is parseable as `Self`.
+    /// Determine if `input` is parseable as `Self`.
     ///
-    /// If it is, `get_or_insert` all points to get their indicies
-    /// and return `Self`.
+    /// If it is, [`PointIndex::get_or_insert`] all points to get
+    /// their indicies and return `Some(Self)`.
     ///
-    /// Otherwise, return `Err(())` *before* inserting points.
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()>
+    /// Otherwise, return `None` *before* inserting points.
+    fn parse(input: &str, index: &mut PointIndex) -> Option<Self>
     where
         Self: Sized;
 
     /// Return a slice iterating over all points refrenced by this
     /// constraint (including duplicates).
     ///
-    /// This allows the `PointIndex` to map points to constraints
+    /// This allows the [`PointIndex`] to map points to constraints
     /// without iterating over every constraint for every point.
     fn points(&self) -> &[PointID];
 
     /// Return a mut slice iterating over all points refrenced by
     /// this constraint (including duplicates).
     ///
-    /// This allows the `PointID`s to be replaced with ordered IDs
+    /// This allows the [`PointID`]s to be replaced with ordered IDs
     /// before solving. (See `geo`)
     fn points_mut(&mut self) -> &mut [PointID];
 
@@ -54,7 +54,7 @@ pub trait Constraint: Debug + Display {
     ///
     /// Already known points are invalid targets.
     ///
-    /// An empty `Vec` should be returned if the constraint cannot be
+    /// An empty [`Vec`] should be returned if the constraint cannot be
     /// applied.
     fn targets(&self, known_points: &HashSet<PointID>) -> Vec<PointID>;
 
@@ -65,7 +65,7 @@ pub trait Constraint: Debug + Display {
     /// A point is known if its ID is an index in the `pos` slice.
     fn geo(&self, pos: &[Vector], t_ind: usize) -> Vec<Geo>;
 
-    /// Characterize this constraint with flags from `ConFlags`.
+    /// Characterize this constraint with flags from [`ConFlags`].
     fn flags(&self) -> ConFlags {
         ConFlags::default()
     }

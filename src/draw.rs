@@ -6,7 +6,8 @@ use rsille::Canvas;
 use crate::{
     constraints::elements::Point,
     math::{bounding_box, Number, Vector},
-    order::PointIndex, parsing::{delimited_list, ident, next_char, opt_flag, pair},
+    order::PointIndex,
+    parsing::{literal, space, word},
 };
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -140,64 +141,47 @@ pub enum PathCmd {
     Cubic(Point, Point, Point),
 }
 
-pub fn parse_path(s: &str) -> Result<Vec<PathCmd>, ()> {
-    let s = s.replace("→", "->");
-
-    let parser = delimited_list(
-        next_char('-'),
-        pair(opt_flag(next_char('>')), ident),
-        2,
-        usize::MAX
-    );
-
-    let Some((_, results)) = parser(&s) else {
-        return Err(());
-    };
-
-    {
-        let mut count = 0;
-        for (b, _) in results.iter() {
-            count += 1;
-            if *b {
-                if count > 3 {
-                    return Err(());
-                }
-                count = 0;
-            }
+pub fn parse_path(mut input: &str) -> Option<Vec<PathCmd>> {
+    let mut points = Vec::new();
+    let mut cmds = Vec::new();
+    let mut term = true;
+    loop {
+        points.push(word(&mut input)?);
+        if term {
+            cmds.push(match points.len() {
+                1 => PathCmd::Line(points[0].to_string()),
+                2 => PathCmd::Quadratic(points[0].to_string(), points[1].to_string()),
+                3 => PathCmd::Cubic(
+                    points[0].to_string(),
+                    points[1].to_string(),
+                    points[2].to_string(),
+                ),
+                _ => return None,
+            });
+            points.clear();
         }
-        if count > 0 {
-            return Err(());
-        }
+        term = if literal("→")(&mut input)
+            .or(literal("->")(&mut input))
+            .is_some()
+        {
+            true
+        } else if literal("-")(&mut input).is_some() {
+            false
+        } else {
+            break;
+        };
+        space(&mut input);
     }
 
-    let mut results = results.into_iter();
-    let mut cmds = Vec::new();
+    if !points.is_empty() {
+        return None;
+    }
 
     // Starting M (Move) command
-    {
-        let (_, p) = results.next().unwrap();
-        cmds.push(PathCmd::Move(p.to_string()));
-    }
+    cmds[0] = match &cmds[0] {
+        PathCmd::Line(p) => PathCmd::Move(p.clone()),
+        _ => unreachable!(),
+    };
 
-    let mut points = Vec::new();
-    for (end, p) in results {
-        points.push(p);
-        if !end {
-            continue;
-        }
-        cmds.push(match points.len() {
-            0 => unreachable!(),
-            1 => PathCmd::Line(points[0].to_string()),
-            2 => PathCmd::Quadratic(points[0].to_string(), points[1].to_string()),
-            3 => PathCmd::Cubic(
-                points[0].to_string(),
-                points[1].to_string(),
-                points[2].to_string(),
-            ),
-            _ => panic!(),
-        });
-        points.clear();
-    }
-
-    Ok(cmds)
+    Some(cmds)
 }

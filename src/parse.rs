@@ -30,7 +30,7 @@ pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
         }
         return Ok(());
     }
-    if let Ok(path) = parse_path(line) {
+    if let Some(path) = parse_path(line) {
         index.add_path(path);
         return Ok(());
     }
@@ -44,16 +44,16 @@ pub fn parse_constraint(
     line: &str,
     index: &mut PointIndex,
 ) -> Result<Vec<Box<dyn Constraint>>, String> {
-    if let Ok(parsed) = Parallel::parse(line, index) {
+    if let Some(parsed) = Parallel::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
-    if let Ok(parsed) = Perpendicular::parse(line, index) {
+    if let Some(parsed) = Perpendicular::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
-    if let Ok(parsed) = Collinear::parse(line, index) {
+    if let Some(parsed) = Collinear::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
-    if let Ok(parsed) = AnglePolarity::parse(line, index) {
+    if let Some(parsed) = AnglePolarity::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
     if let Ok(parsed) = parse_equality(line, index) {
@@ -77,11 +77,11 @@ pub fn parse_equality(
     let mut elements: Vec<Element> = Vec::new();
     for expr in line.split("=") {
         let expr = expr.trim();
-        if let Ok(parsed) = Distance::parse(expr, index) {
+        if let Some(parsed) = Distance::parse(expr, index) {
             elements.push(Element::D(parsed));
             continue;
         }
-        if let Ok(parsed) = Angle::parse(expr, index) {
+        if let Some(parsed) = Angle::parse(expr, index) {
             elements.push(Element::A(parsed));
             continue;
         }

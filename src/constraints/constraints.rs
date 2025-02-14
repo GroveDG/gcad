@@ -8,9 +8,7 @@ use crate::{
         Number, Vector,
     },
     order::{PointID, PointIndex},
-    parsing::{
-        after, before, delimited_list, flag, ident, inner, next_str, one_of, opt_ws, pair, ws,
-    },
+    parsing::{literal, space, word},
 };
 
 use super::{ConFlags, Constraint};
@@ -35,23 +33,29 @@ impl Display for Parallel {
 }
 
 impl Constraint for Parallel {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = delimited_list(
-            one_of(vec![next_str("∥"), next_str("||")]),
-            inner(opt_ws, delimited_list(ws, ident, 2, 2), opt_ws),
-            2,
-            usize::MAX,
-        );
-        let Some((_, points)) = parser(s) else {
-            return Err(());
-        };
-        Ok(Self {
-            points: points
-                .into_iter()
-                .flatten()
-                .map(|p| index.get_or_insert(p))
-                .collect(),
-        })
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        let mut point_names = Vec::new();
+        loop {
+            point_names.push(word(&mut input)?);
+            space(&mut input)?;
+            point_names.push(word(&mut input)?);
+            space(&mut input);
+            if literal("∥")(&mut input)
+                .or(literal("||")(&mut input))
+                .is_none()
+            {
+                break;
+            }
+            space(&mut input);
+        }
+        if point_names.len() < 4 {
+            return None;
+        }
+        let points = point_names
+            .into_iter()
+            .map(|p| index.get_or_insert(p))
+            .collect();
+        Some(Self { points })
     }
 
     fn points(&self) -> &[PointID] {
@@ -124,23 +128,29 @@ impl Display for Perpendicular {
 }
 
 impl Constraint for Perpendicular {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = delimited_list(
-            one_of(vec![next_str("⟂"), next_str("_|_")]),
-            inner(opt_ws, delimited_list(ws, ident, 2, 2), opt_ws),
-            2,
-            usize::MAX,
-        );
-        let Some((_, points)) = parser(s) else {
-            return Err(());
-        };
-        Ok(Self {
-            points: points
-                .into_iter()
-                .flatten()
-                .map(|p| index.get_or_insert(p))
-                .collect(),
-        })
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        let mut point_names = Vec::new();
+        loop {
+            point_names.push(word(&mut input)?);
+            space(&mut input)?;
+            point_names.push(word(&mut input)?);
+            space(&mut input);
+            if literal("⟂")(&mut input)
+                .or(literal("_|_")(&mut input))
+                .is_none()
+            {
+                break;
+            }
+            space(&mut input);
+        }
+        if point_names.len() < 4 {
+            return None;
+        }
+        let points = point_names
+            .into_iter()
+            .map(|p| index.get_or_insert(p))
+            .collect();
+        Some(Self { points })
     }
 
     fn points(&self) -> &[PointID] {
@@ -210,14 +220,24 @@ impl Display for Collinear {
 }
 
 impl Constraint for Collinear {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = delimited_list(next_str("-"), inner(opt_ws, ident, opt_ws), 3, usize::MAX);
-        let Some((_, points)) = parser(s) else {
-            return Err(());
-        };
-        Ok(Self {
-            points: points.into_iter().map(|p| index.get_or_insert(p)).collect(),
-        })
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        let mut point_names = Vec::new();
+        loop {
+            point_names.push(word(&mut input)?);
+            space(&mut input);
+            if literal("-")(&mut input).is_none() {
+                break;
+            }
+            space(&mut input);
+        }
+        if point_names.len() < 3 {
+            return None;
+        }
+        let points = point_names
+            .into_iter()
+            .map(|p| index.get_or_insert(p))
+            .collect();
+        Some(Self { points })
     }
 
     fn points(&self) -> &[PointID] {
@@ -300,42 +320,47 @@ impl Display for AnglePolarity {
 }
 
 impl Constraint for AnglePolarity {
-    fn parse(s: &str, index: &mut PointIndex) -> Result<Self, ()> {
-        let parser = delimited_list(
-            before(next_str(","), opt_ws),
-            pair(
-                before(
-                    flag(
-                        one_of(vec![next_str("±"), next_str("+/-")]),
-                        one_of(vec![next_str("∓"), next_str("-/+")]),
-                    ),
-                    after(opt_ws, one_of(vec![next_str("<"), next_str("∠")])),
-                ),
-                inner(opt_ws, delimited_list(ws, ident, 3, 3), opt_ws),
-            ),
-            2,
-            usize::MAX,
-        );
-        let Some((_, points)) = parser(s) else {
-            return Err(());
-        };
-        let (polarities, points): (Vec<Polarity>, Vec<[PointID; 3]>) = points
+    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+        let mut polarities = Vec::new();
+        let mut point_names = Vec::new();
+        loop {
+            polarities.push(
+                if literal("±")(&mut input)
+                    .or(literal("+/-")(&mut input))
+                    .is_some()
+                {
+                    Polarity::Pro
+                } else if literal("∓")(&mut input)
+                    .or(literal("-/+")(&mut input))
+                    .is_some()
+                {
+                    Polarity::Anti
+                } else {
+                    return None;
+                },
+            );
+            space(&mut input);
+            literal("∠")(&mut input).or(literal("<")(&mut input))?;
+            space(&mut input);
+            point_names.push(word(&mut input)?);
+            space(&mut input)?;
+            point_names.push(word(&mut input)?);
+            space(&mut input)?;
+            point_names.push(word(&mut input)?);
+            space(&mut input);
+            if literal(",")(&mut input).is_none() {
+                break;
+            }
+            space(&mut input);
+        }
+        if polarities.len() < 2 {
+            return None;
+        }
+        let points = point_names
             .into_iter()
-            .map(|(pol, p)| {
-                (
-                    if pol { Polarity::Pro } else { Polarity::Anti },
-                    [
-                        index.get_or_insert(p[0]),
-                        index.get_or_insert(p[1]),
-                        index.get_or_insert(p[2]),
-                    ],
-                )
-            })
-            .unzip();
-        Ok(Self {
-            points: points.into_flattened(),
-            polarities,
-        })
+            .map(|p| index.get_or_insert(p))
+            .collect();
+        Some(Self { points, polarities })
     }
 
     fn points(&self) -> &[PointID] {
