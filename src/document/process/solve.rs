@@ -7,7 +7,7 @@ use crate::{
     }, util::locate
 };
 
-fn solve_iter(
+fn iter_brute(
     order: &Vec<Vec<CID>>,
     index: &mut Document,
     positions: &mut Vec<Vector>,
@@ -27,19 +27,19 @@ fn solve_iter(
         .unwrap_or_else(|| vec![Geo::Two(TwoD::All)]);
     for g in geo {
         positions[i] = choose(g);
-        if solve_iter(order, index, positions, i + 1).is_ok() {
+        if iter_brute(order, index, positions, i + 1).is_ok() {
             return Ok(());
         }
     }
     return Err(());
 }
 
-pub fn brute_solve(
+pub fn solve_brute(
     index: &mut Document,
     order: Vec<Vec<CID>>,
 ) -> Result<HashMap<String, Vector>, String> {
     let mut positions = vec![Vector::ZERO; order.len()];
-    if solve_iter(&order, index, &mut positions, 0).is_ok() {
+    if iter_brute(&order, index, &mut positions, 0).is_ok() {
         Ok(HashMap::from_iter(
             positions
                 .into_iter()

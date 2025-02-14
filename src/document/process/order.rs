@@ -131,7 +131,7 @@ fn compute_forest(index: &mut Document) -> Vec<Vec<(PointID, Vec<CID>)>> {
     orders
 }
 
-pub fn bfs_order(index: &mut Document) -> Vec<Vec<CID>> {
+pub fn order_bfs(index: &mut Document) -> Vec<Vec<CID>> {
     let forest = compute_forest(index).into_iter().flatten().collect_vec();
 
     let mut mapping: HashMap<PointID, usize> = HashMap::new();

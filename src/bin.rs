@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use clap_derive::ValueEnum;
-use gsolve::document::{bfs_order, brute_solve, draw_svg, draw_terminal, Document};
+use gsolve::document::{order_bfs, solve_brute, draw_svg, draw_terminal, Document};
 use gsolve::util::print_heading;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -47,7 +47,7 @@ fn main() -> Result<(), String> {
         }
     }
 
-    let order = bfs_order(&mut index);
+    let order = order_bfs(&mut index);
 
     if args.verbose {
         print_heading("Constraints by Point");
@@ -59,7 +59,7 @@ fn main() -> Result<(), String> {
         }
     }
 
-    let positions = brute_solve(&mut index, order)?;
+    let positions = solve_brute(&mut index, order)?;
 
     if args.verbose {
         print_heading("Positions");
