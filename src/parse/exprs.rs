@@ -19,6 +19,7 @@ use crate::{
 };
 
 pub mod constraints;
+pub mod draw;
 pub mod elements;
 
 pub trait Constraint: Debug + Display {

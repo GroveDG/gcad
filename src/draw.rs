@@ -4,10 +4,8 @@ use clap_derive::ValueEnum;
 use rsille::Canvas;
 
 use crate::{
-    constraints::elements::Point,
     math::{bounding_box, Number, Vector},
     order::PointIndex,
-    parsing::{literal, space, word},
 };
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -25,7 +23,7 @@ pub struct DrawOptions {
     pub paths: Vec<Vec<PathCmd>>,
 }
 
-pub fn draw_terminal(mut positions: HashMap<Point, Vector>, index: &PointIndex) {
+pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &PointIndex) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
@@ -74,7 +72,7 @@ pub fn draw_terminal(mut positions: HashMap<Point, Vector>, index: &PointIndex) 
     canvas.print();
 }
 
-pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> std::io::Result<()> {
+pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &PointIndex) -> std::io::Result<()> {
     let (min, max) = bounding_box(positions.values());
     let size = max - min;
     let (size_x, size_y) = size.into();
@@ -135,53 +133,8 @@ pub fn draw_svg(mut positions: HashMap<Point, Vector>, index: &PointIndex) -> st
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathCmd {
-    Move(Point),
-    Line(Point),
-    Quadratic(Point, Point),
-    Cubic(Point, Point, Point),
-}
-
-pub fn parse_path(mut input: &str) -> Option<Vec<PathCmd>> {
-    let mut points = Vec::new();
-    let mut cmds = Vec::new();
-    let mut term = true;
-    loop {
-        points.push(word(&mut input)?);
-        if term {
-            cmds.push(match points.len() {
-                1 => PathCmd::Line(points[0].to_string()),
-                2 => PathCmd::Quadratic(points[0].to_string(), points[1].to_string()),
-                3 => PathCmd::Cubic(
-                    points[0].to_string(),
-                    points[1].to_string(),
-                    points[2].to_string(),
-                ),
-                _ => return None,
-            });
-            points.clear();
-        }
-        term = if literal("→")(&mut input)
-            .or(literal("->")(&mut input))
-            .is_some()
-        {
-            true
-        } else if literal("-")(&mut input).is_some() {
-            false
-        } else {
-            break;
-        };
-        space(&mut input);
-    }
-
-    if !points.is_empty() {
-        return None;
-    }
-
-    // Starting M (Move) command
-    cmds[0] = match &cmds[0] {
-        PathCmd::Line(p) => PathCmd::Move(p.clone()),
-        _ => unreachable!(),
-    };
-
-    Some(cmds)
+    Move(String),
+    Line(String),
+    Quadratic(String, String),
+    Cubic(String, String, String),
 }

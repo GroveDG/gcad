@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    constraints::{elements::Point, ConFlags, Constraint},
+    parse::exprs::{ConFlags, Constraint},
     draw::{DrawOptions, PathCmd},
 };
 use std::{collections::HashSet, hash::RandomState, iter::repeat};
@@ -15,7 +15,7 @@ pub type CID = usize;
 
 #[derive(Debug, Default)]
 pub struct PointIndex {
-    id2p: BiHashMap<PointID, Point>,
+    id2p: BiHashMap<PointID, String>,
     id2c: HashMap<PointID, Vec<CID>>,
     constraints: Vec<Box<dyn Constraint>>,
     pub draw: DrawOptions,
@@ -63,7 +63,7 @@ impl PointIndex {
         self.id2p.left_values()
     }
 
-    pub fn get_point(&self, id: &PointID) -> &Point {
+    pub fn get_point(&self, id: &PointID) -> &String {
         self.id2p.get_by_left(id).unwrap()
     }
 

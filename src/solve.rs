@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::{
-    constraints::elements::Point,
     math::{
         geo::{choose, meet, Geo, TwoD},
         Vector,
@@ -40,7 +39,7 @@ fn solve_iter(
 pub fn brute_solve(
     index: &mut PointIndex,
     order: Vec<Vec<CID>>,
-) -> Result<HashMap<Point, Vector>, String> {
+) -> Result<HashMap<String, Vector>, String> {
     let mut positions = vec![Vector::ZERO; order.len()];
     if solve_iter(&order, index, &mut positions, 0).is_ok() {
         Ok(HashMap::from_iter(

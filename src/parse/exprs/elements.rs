@@ -1,18 +1,16 @@
 use std::fmt::Display;
 
 use crate::{
-    constraints::Constraint,
     math::{
         geo::{Geo, OneD},
         AboutEq as _, Number, Vector,
     },
     order::{PointID, PointIndex},
-    parsing::{literal, space, word},
+    parse::exprs::Constraint,
+    parse::parsing::{literal, space, word},
 };
 
 use super::constraints::targets;
-
-pub type Point = String;
 
 #[derive(Debug)]
 pub struct Distance {

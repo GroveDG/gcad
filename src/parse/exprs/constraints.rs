@@ -8,7 +8,7 @@ use crate::{
         Number, Vector,
     },
     order::{PointID, PointIndex},
-    parsing::{literal, space, word},
+    parse::parsing::{literal, space, word},
 };
 
 use super::{ConFlags, Constraint};

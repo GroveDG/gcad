@@ -1,12 +1,15 @@
+pub mod exprs;
+mod parsing;
+
 use crate::{
-    constraints::{
+    math::Number,
+    order::PointIndex,
+    parse::exprs::{
         constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
+        draw::parse_path,
         elements::{Angle, Distance},
         Constraint,
     },
-    draw::parse_path,
-    math::Number,
-    order::PointIndex,
 };
 
 pub fn parse_document(doc: String) -> Result<PointIndex, String> {
