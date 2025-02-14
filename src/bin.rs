@@ -4,11 +4,23 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use clap::Parser;
-use gsolve::draw::{self, draw_svg, draw_terminal};
-use gsolve::order::bfs_order;
-use gsolve::document::parse_document;
-use gsolve::solve::brute_solve;
+use clap_derive::ValueEnum;
+use gsolve::document::{bfs_order, brute_solve, draw_svg, draw_terminal, Document};
 use gsolve::util::print_heading;
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Output {
+    /// Prints figure.
+    Terminal,
+    /// Saves points as CSV.
+    CSV,
+    /// Saves figure as SVG.
+    SVG,
+}
+#[derive(Debug, Clone, Default)]
+pub struct DrawOptions {
+    pub output: Option<Output>,
+}
 
 #[derive(Parser)]
 struct CLIArgs {
@@ -16,9 +28,9 @@ struct CLIArgs {
     file: PathBuf,
     /// Output for solved figure.
     #[arg(value_enum)]
-    output: Option<draw::Output>,
+    output: Option<Output>,
     #[arg(short, long)]
-    verbose: bool
+    verbose: bool,
 }
 
 fn main() -> Result<(), String> {
@@ -26,8 +38,7 @@ fn main() -> Result<(), String> {
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
-    let mut index = parse_document(contents)?;
-    index.draw.output = args.output;
+    let mut index: Document = contents.parse()?;
 
     if args.verbose {
         print_heading("Constraints");
@@ -56,19 +67,19 @@ fn main() -> Result<(), String> {
             println!("{}: {}", point, pos);
         }
     }
-    if let Some(output) = index.draw.output {
+    if let Some(output) = args.output {
         match output {
-            draw::Output::CSV => {
+            Output::CSV => {
                 let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
                 for (point, pos) in positions.iter() {
                     csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
                         .map_err(|e| e.to_string())?;
                 }
             }
-            draw::Output::SVG => {
+            Output::SVG => {
                 draw_svg(positions, &index).map_err(|e| e.to_string())?;
             }
-            draw::Output::Terminal => {
+            Output::Terminal => {
                 print_heading("Figure");
                 draw_terminal(positions, &index);
             }

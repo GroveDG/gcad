@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::exprs::{
     constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
     draw::parse_path,
@@ -6,14 +8,18 @@ use super::exprs::{
 };
 use crate::{math::Number, document::Document};
 
-pub fn parse_document(doc: String) -> Result<Document, String> {
-    let mut index = Document::default();
-    for line in doc.lines() {
-        if parse_line(line, &mut index).is_err() {
-            return Err(format!("failed to parse line: {line}"));
+impl FromStr for Document {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut index = Document::default();
+        for line in s.lines() {
+            if parse_line(line, &mut index).is_err() {
+                return Err(format!("failed to parse line: {line}"));
+            }
         }
+        Ok(index)
     }
-    Ok(index)
 }
 
 pub fn parse_line(mut line: &str, index: &mut Document) -> Result<(), ()> {

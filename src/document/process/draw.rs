@@ -1,27 +1,11 @@
 use std::{collections::HashMap, fs::File, io::Write};
 
-use clap_derive::ValueEnum;
 use rsille::Canvas;
 
 use crate::{
     document::{Document, PathCmd},
     math::{bounding_box, Number, Vector},
 };
-
-#[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum Output {
-    /// Prints figure.
-    Terminal,
-    /// Saves points as CSV.
-    CSV,
-    /// Saves figure as SVG.
-    SVG,
-}
-#[derive(Debug, Clone, Default)]
-pub struct DrawOptions {
-    pub output: Option<Output>,
-    pub paths: Vec<Vec<PathCmd>>,
-}
 
 pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &Document) {
     let (mut min, mut max) = bounding_box(positions.values());

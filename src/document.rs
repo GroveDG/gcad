@@ -1,19 +1,18 @@
 pub mod exprs;
 mod parse;
 mod parsing;
+mod process;
 
-use std::collections::HashMap;
-
-use exprs::Constraint;
 pub use exprs::{
     constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
-    elements::{Angle, Distance},
     draw::PathCmd,
+    elements::{Angle, Distance},
 };
-pub use parse::parse_document;
-use bimap::BiHashMap;
+pub use process::*;
 
-use crate::draw::DrawOptions;
+use std::collections::HashMap;
+use bimap::BiHashMap;
+use exprs::Constraint;
 
 pub type PointID = usize;
 pub type CID = usize;
@@ -23,7 +22,7 @@ pub struct Document {
     id2p: BiHashMap<PointID, String>,
     id2c: HashMap<PointID, Vec<CID>>,
     constraints: Vec<Box<dyn Constraint>>,
-    pub draw: DrawOptions,
+    paths: Vec<Vec<PathCmd>>,
 }
 
 impl Document {
@@ -45,11 +44,11 @@ impl Document {
     }
 
     pub fn add_path(&mut self, path: Vec<PathCmd>) {
-        self.draw.paths.push(path);
+        self.paths.push(path);
     }
 
     pub fn paths(&self) -> &[Vec<PathCmd>] {
-        &self.draw.paths
+        &self.paths
     }
 
     pub fn constraints(&self) -> &[Box<dyn Constraint>] {
