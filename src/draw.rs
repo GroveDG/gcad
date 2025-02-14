@@ -4,8 +4,8 @@ use clap_derive::ValueEnum;
 use rsille::Canvas;
 
 use crate::{
+    document::{Document, PathCmd},
     math::{bounding_box, Number, Vector},
-    order::PointIndex,
 };
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -23,7 +23,7 @@ pub struct DrawOptions {
     pub paths: Vec<Vec<PathCmd>>,
 }
 
-pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &PointIndex) {
+pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &Document) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
@@ -72,7 +72,7 @@ pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &PointIndex)
     canvas.print();
 }
 
-pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &PointIndex) -> std::io::Result<()> {
+pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &Document) -> std::io::Result<()> {
     let (min, max) = bounding_box(positions.values());
     let size = max - min;
     let (size_x, size_y) = size.into();
@@ -129,12 +129,4 @@ pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &PointIndex) -> s
     }
     svg.write("\n</svg>".as_bytes())?;
     Ok(())
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PathCmd {
-    Move(String),
-    Line(String),
-    Quadratic(String, String),
-    Cubic(String, String, String),
 }

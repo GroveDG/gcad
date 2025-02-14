@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use gsolve::draw::{self, draw_svg, draw_terminal};
 use gsolve::order::bfs_order;
-use gsolve::parse::parse_document;
+use gsolve::document::parse_document;
 use gsolve::solve::brute_solve;
 use gsolve::util::print_heading;
 

@@ -1,7 +1,12 @@
-use crate::{
-    draw::PathCmd,
-    parse::parsing::{literal, space, word},
-};
+use crate::document::parsing::{literal, space, word};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PathCmd {
+    Move(String),
+    Line(String),
+    Quadratic(String, String),
+    Cubic(String, String, String),
+}
 
 pub fn parse_path(mut input: &str) -> Option<Vec<PathCmd>> {
     let mut points = Vec::new();

@@ -1,17 +1,15 @@
 use std::collections::HashMap;
 
 use crate::{
-    math::{
+    document::{Document, CID}, math::{
         geo::{choose, meet, Geo, TwoD},
         Vector,
-    },
-    order::{PointIndex, CID},
-    util::locate,
+    }, util::locate
 };
 
 fn solve_iter(
     order: &Vec<Vec<CID>>,
-    index: &mut PointIndex,
+    index: &mut Document,
     positions: &mut Vec<Vector>,
     i: usize,
 ) -> Result<(), ()> {
@@ -37,7 +35,7 @@ fn solve_iter(
 }
 
 pub fn brute_solve(
-    index: &mut PointIndex,
+    index: &mut Document,
     order: Vec<Vec<CID>>,
 ) -> Result<HashMap<String, Vector>, String> {
     let mut positions = vec![Vector::ZERO; order.len()];

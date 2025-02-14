@@ -1,19 +1,13 @@
-pub mod exprs;
-mod parsing;
-
-use crate::{
-    math::Number,
-    order::PointIndex,
-    parse::exprs::{
-        constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
-        draw::parse_path,
-        elements::{Angle, Distance},
-        Constraint,
-    },
+use super::exprs::{
+    constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
+    draw::parse_path,
+    elements::{Angle, Distance},
+    Constraint,
 };
+use crate::{math::Number, document::Document};
 
-pub fn parse_document(doc: String) -> Result<PointIndex, String> {
-    let mut index = PointIndex::default();
+pub fn parse_document(doc: String) -> Result<Document, String> {
+    let mut index = Document::default();
     for line in doc.lines() {
         if parse_line(line, &mut index).is_err() {
             return Err(format!("failed to parse line: {line}"));
@@ -22,7 +16,7 @@ pub fn parse_document(doc: String) -> Result<PointIndex, String> {
     Ok(index)
 }
 
-pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
+pub fn parse_line(mut line: &str, index: &mut Document) -> Result<(), ()> {
     line = line.trim();
     if line.is_empty() {
         return Ok(());
@@ -45,7 +39,7 @@ pub fn parse_line(mut line: &str, index: &mut PointIndex) -> Result<(), ()> {
 
 pub fn parse_constraint(
     line: &str,
-    index: &mut PointIndex,
+    index: &mut Document,
 ) -> Result<Vec<Box<dyn Constraint>>, String> {
     if let Some(parsed) = Parallel::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
@@ -67,7 +61,7 @@ pub fn parse_constraint(
 
 pub fn parse_equality(
     line: &str,
-    index: &mut PointIndex,
+    index: &mut Document,
 ) -> Result<Vec<Box<dyn Constraint>>, String> {
     enum Element {
         D(Distance),

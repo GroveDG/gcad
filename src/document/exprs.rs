@@ -15,7 +15,7 @@ use bitflags::bitflags;
 
 use crate::{
     math::{geo::Geo, Vector},
-    order::{PointID, PointIndex},
+    document::{PointID, Document},
 };
 
 pub mod constraints;
@@ -29,7 +29,7 @@ pub trait Constraint: Debug + Display {
     /// their indicies and return `Some(Self)`.
     ///
     /// Otherwise, return `None` *before* inserting points.
-    fn parse(input: &str, index: &mut PointIndex) -> Option<Self>
+    fn parse(input: &str, index: &mut Document) -> Option<Self>
     where
         Self: Sized;
 

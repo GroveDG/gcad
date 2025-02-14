@@ -1,13 +1,15 @@
 use std::fmt::Display;
 
 use crate::{
+    document::{
+        exprs::Constraint,
+        parsing::{literal, space, word},
+    },
     math::{
         geo::{Geo, OneD},
         AboutEq as _, Number, Vector,
     },
-    order::{PointID, PointIndex},
-    parse::exprs::Constraint,
-    parse::parsing::{literal, space, word},
+    document::{PointID, Document},
 };
 
 use super::constraints::targets;
@@ -25,7 +27,7 @@ impl Display for Distance {
 }
 
 impl Constraint for Distance {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         literal("|")(&mut input)?;
         space(&mut input);
         let a = word(&mut input)?;
@@ -79,7 +81,7 @@ impl Display for Angle {
 }
 
 impl Constraint for Angle {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         literal("∠")(&mut input).or(literal("<")(&mut input))?;
         space(&mut input);
         let a = word(&mut input)?;

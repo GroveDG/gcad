@@ -7,8 +7,8 @@ use crate::{
         geo::{line_from_points, Geo, OneD, TwoD},
         Number, Vector,
     },
-    order::{PointID, PointIndex},
-    parse::parsing::{literal, space, word},
+    document::{PointID, Document},
+    document::parsing::{literal, space, word},
 };
 
 use super::{ConFlags, Constraint};
@@ -33,7 +33,7 @@ impl Display for Parallel {
 }
 
 impl Constraint for Parallel {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         let mut point_names = Vec::new();
         loop {
             point_names.push(word(&mut input)?);
@@ -109,7 +109,7 @@ impl Display for Perpendicular {
 }
 
 impl Constraint for Perpendicular {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         let mut point_names = Vec::new();
         loop {
             point_names.push(word(&mut input)?);
@@ -182,7 +182,7 @@ impl Display for Collinear {
 }
 
 impl Constraint for Collinear {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         let mut point_names = Vec::new();
         loop {
             point_names.push(word(&mut input)?);
@@ -270,7 +270,7 @@ impl Display for AnglePolarity {
 }
 
 impl Constraint for AnglePolarity {
-    fn parse(mut input: &str, index: &mut PointIndex) -> Option<Self> {
+    fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         let mut polarities = Vec::new();
         let mut point_names = Vec::new();
         loop {
