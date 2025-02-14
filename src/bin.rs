@@ -38,28 +38,28 @@ fn main() -> Result<(), String> {
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
-    let mut index: Document = contents.parse()?;
+    let mut doc: Document = contents.parse()?;
 
     if args.verbose {
         print_heading("Constraints");
-        for c in index.constraints() {
+        for c in doc.constraints() {
             println!("{:?}", c);
         }
     }
 
-    let order = order_bfs(&mut index);
+    let order = order_bfs(&mut doc);
 
     if args.verbose {
         print_heading("Constraints by Point");
         for (id, cs) in order.iter().enumerate() {
-            println!("{}:", index.get_point(&id));
+            println!("{}:", doc.get_point(&id));
             for &c in cs {
-                println!(" {}", index.get_constraint(c));
+                println!(" {}", doc.get_constraint(c));
             }
         }
     }
 
-    let positions = solve_brute(&mut index, order)?;
+    let positions = solve_brute(&mut doc, order)?;
 
     if args.verbose {
         print_heading("Positions");
@@ -77,11 +77,11 @@ fn main() -> Result<(), String> {
                 }
             }
             Output::SVG => {
-                draw_svg(positions, &index).map_err(|e| e.to_string())?;
+                draw_svg(positions, &doc).map_err(|e| e.to_string())?;
             }
             Output::Terminal => {
                 print_heading("Figure");
-                draw_terminal(positions, &index);
+                draw_terminal(positions, &doc);
             }
         }
     }
