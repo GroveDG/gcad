@@ -13,7 +13,21 @@ impl FromStr for Document {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut index = Document::default();
-        for line in s.lines() {
+        let mut comment = false;
+        for mut line in s.lines() {
+            line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            if line.starts_with('\"') {
+                comment = true;
+            }
+            if line.ends_with('\"') {
+                comment = false;
+            }
+            if comment {
+                continue;
+            }
             if parse_line(line, &mut index).is_err() {
                 return Err(format!("failed to parse line: {line}"));
             }
@@ -22,11 +36,7 @@ impl FromStr for Document {
     }
 }
 
-pub fn parse_line(mut line: &str, index: &mut Document) -> Result<(), ()> {
-    line = line.trim();
-    if line.is_empty() {
-        return Ok(());
-    }
+pub fn parse_line(line: &str, index: &mut Document) -> Result<(), ()> {
     if let Ok(cs) = parse_constraint(line, index) {
         for c in cs {
             index.add_constraint(c);
