@@ -250,12 +250,12 @@ impl Display for Polarity {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct AnglePolarity {
+pub struct Chirality {
     pub points: Vec<PointID>,
     pub polarities: Vec<Polarity>,
 }
 
-impl Display for AnglePolarity {
+impl Display for Chirality {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -269,7 +269,7 @@ impl Display for AnglePolarity {
     }
 }
 
-impl Constraint for AnglePolarity {
+impl Constraint for Chirality {
     fn parse(mut input: &str, index: &mut Document) -> Option<Self> {
         let mut polarities = Vec::new();
         let mut point_names = Vec::new();

@@ -4,7 +4,7 @@ mod parsing;
 mod process;
 
 pub use exprs::{
-    constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
+    constraints::{Chirality, Collinear, Parallel, Perpendicular},
     draw::PathCmd,
     elements::{Angle, Distance},
 };

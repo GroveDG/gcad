@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use super::exprs::{
-    constraints::{AnglePolarity, Collinear, Parallel, Perpendicular},
+    constraints::{Chirality, Collinear, Parallel, Perpendicular},
     draw::parse_path,
     elements::{Angle, Distance},
     Constraint,
@@ -56,7 +56,7 @@ pub fn parse_constraint(
     if let Some(parsed) = Collinear::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
-    if let Some(parsed) = AnglePolarity::parse(line, index) {
+    if let Some(parsed) = Chirality::parse(line, index) {
         return Ok(vec![Box::new(parsed)]);
     }
     if let Ok(parsed) = parse_equality(line, index) {

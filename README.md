@@ -4,18 +4,22 @@ GCAD (short for Geometry CAD) is a text-based CAD format based on geometry notat
 
 # Quick Reference
 ```
-                    Proper          Improper     
- ═══════════════╤══════════════╤═════════════════
-  Distance      ╷ |A B| = 1    ╷              
-  Angle         ╷ ∠A B C = 1   ╷ <A B C = 1   
-  Parallel      ╷ A B ∥ C D    ╷ A B || C D   
-  Perpendicular ╷ A B ⟂ C D    ╷ A B _|_ C D  
-  Collinear     ╷ A-B-C        ╷
-  Polarity      ╷ ±∠A B C, ... ╷ +/-<A B C, ...
-                ╷              ╷
-  Line          ╷ A→B          ╷ A->B
-  Quadratic     ╷ A-B→C        ╷ A-B->C
-  Cubic         ╷ A-B-C→D      ╷ A-B-C->D
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  CONSTRAINTS         Proper          Improper    
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┬┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┬┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  Distance      ╷ |A B| = 1      ╷              
+  Angle         ╷ ∠A B C = 1     ╷ <A B C = 1   
+  Parallel      ╷ A B ∥ C D  ... ╷ A B || C D  ...
+  Perpendicular ╷ A B ⟂ C D  ... ╷ A B _|_ C D ...
+  Collinear     ╷ A-B-C-     ... ╷
+  Chirality     ╷ ±∠A B C,       ╷ +/-<A B C,    
+                ╷ ∓∠A B C,   ... ╷ -/+<A B C,  ...
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  DRAWING             Proper          Improper
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┬┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┬┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  Line          ╷ A→B            ╷ A->B
+  Quadratic     ╷ A-B→C          ╷ A-B->C
+  Cubic         ╷ A-B-C→D        ╷ A-B-C->D
 ```
 
 # Syntax
@@ -34,6 +38,17 @@ GCAD uses significant whitespace. Line breaks end statements and spaces separate
 Comments are enclosed in quotation marks (") with whitespace allowed before and after.
 
 
+# Expressions
+## Constraints
+Most GCAD constraints should be familiar to those who remember geometry
+class (that is the point after all). However you might be unfamiliar
+with Collinear and Chirality.
+
+Collinear states that all specified points are on the same line. Any two points are collinear by definition, so Collinear constraints must have at least 3 points.
+
+Chirality states that all specified angles marked with "±" or "+/-" (Pro) have the opposite sign from angles marked with "∓" or "-/+" (Anti). Since GCAD does not use signed angles, this is used to relate the directions of angles.
+- For example, all interior angles of a convex polygon have the same sign and any exterior angles have the oppsoite sign.
+## Drawing
 
 # Solving
 
@@ -41,7 +56,7 @@ Geometric constraint solving (GCS) is an NP problem, solving complexity increase
 - return a single result without regard for other possible solutions.
 - timeout according to reasonable limits on resources.
 - not give false confidence (ie. "there is no solution" or "these are the only solutions" without having proven so).
-
+Polarity
 ## GSolver
 This current GCS solver is of my own design. It converts constraints into the geometry which represents all points which satisfy it, called the possibility space. These are then intersected to create a discrete set of points from which one is chosen to be the assumed position to inform the solving for the next point. If a point's constraints have no valid intersections, the solver backtracks.
 
