@@ -20,6 +20,7 @@ GCAD (short for Geometry CAD) is a text-based CAD format based on geometry notat
   Line          ╷ A→B            ╷ A->B
   Quadratic     ╷ A-B→C          ╷ A-B->C
   Cubic         ╷ A-B-C→D        ╷ A-B-C->D
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
 ```
 
 # Syntax
