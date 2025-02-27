@@ -7,7 +7,7 @@ use crate::{
     math::{bounding_box, Number, Vector},
 };
 
-pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &Document) {
+pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &Document) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
@@ -38,7 +38,7 @@ pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &Document) {
     for (_, &pos) in positions.iter() {
         canvas.set(pos.x, pos.y);
     }
-    for path in index.paths() {
+    for path in figure.paths() {
         let mut pos = Vector::ZERO;
         for cmd in path {
             pos = match cmd {
@@ -56,7 +56,7 @@ pub fn draw_terminal(mut positions: HashMap<String, Vector>, index: &Document) {
     canvas.print();
 }
 
-pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &Document) -> std::io::Result<()> {
+pub fn draw_svg(mut positions: HashMap<String, Vector>, figure: &Document) -> std::io::Result<()> {
     let (min, max) = bounding_box(positions.values());
     let size = max - min;
     let (size_x, size_y) = size.into();
@@ -72,7 +72,7 @@ pub fn draw_svg(mut positions: HashMap<String, Vector>, index: &Document) -> std
             .as_bytes(),
     )?;
 
-    for path in index.paths() {
+    for path in figure.paths() {
         let mut d = String::new();
         let mut first = "";
         for (i, cmd) in path.iter().enumerate() {

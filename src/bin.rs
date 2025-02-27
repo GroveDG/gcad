@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use clap_derive::ValueEnum;
-use gsolve::document::{order_bfs, solve_brute, draw_svg, draw_terminal, Document};
+use gsolve::document::{order_bfs, solve_brute, draw_svg, draw_terminal, Figure};
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Output {
@@ -37,7 +37,7 @@ fn main() -> Result<(), String> {
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
-    let mut doc: Document = contents.parse()?;
+    let mut doc: Figure = contents.parse()?;
 
     if args.verbose {
         print_heading("Constraints");
