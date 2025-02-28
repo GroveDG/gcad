@@ -7,7 +7,6 @@ use gsolve::{
 };
 
 use crate::{parsing::*, GCADFigure};
-use itertools::Itertools;
 
 impl FromStr for GCADFigure {
     type Err = String;
