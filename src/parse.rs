@@ -57,7 +57,6 @@ impl GCADFigure {
     pub fn add_constraint(&mut self, constraint: Constraint, points: Vec<&str>) {
         let points = points
             .into_iter()
-            .unique()
             .map(|p| self.get_or_insert_id(p))
             .collect();
         self.fig.add_constraint(constraint, points);
@@ -69,7 +68,6 @@ impl GCADFigure {
         self.paths.iter()
     }
     pub fn solve(&mut self) -> Result<HashMap<String, Vector>, String> {
-        println!("{:?}", self.fig);
         let order = order_bfs(&mut self.fig);
         let positions = solve_brute(order)?;
         let mut pos_map = HashMap::new();
