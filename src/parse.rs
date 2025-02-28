@@ -1,22 +1,18 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
-use super::{
-    exprs::{
-        constraints::{Constraint, Element, Polarity},
-        draw::parse_path,
-    },
-    parsing::{literal, space, word},
-};
-use crate::{
-    document::Document,
-    math::Number,
+use gsolve::{
+    constraints::{Constraint, Element, Polarity},
+    math::{Number, Vector},
+    order_bfs, solve_brute, PID,
 };
 
-impl FromStr for Document {
+use crate::{parsing::*, GCADFigure};
+
+impl FromStr for GCADFigure {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut doc = Document::default();
+        let mut fig = GCADFigure::default();
         let mut comment = false;
         for mut line in s.lines() {
             line = line.trim();
@@ -28,31 +24,76 @@ impl FromStr for Document {
             }
             if line.ends_with('\"') {
                 comment = false;
+                continue;
             }
             if comment {
                 continue;
             }
-            if parse_line(line, &mut doc) {
+            if !parse_line(line, &mut fig) {
                 return Err(format!("failed to parse line: {line}"));
             }
         }
-        Ok(doc)
+        Ok(fig)
     }
 }
 
-pub fn parse_line(line: &str, doc: &mut Document) -> bool {
+impl GCADFigure {
+    pub fn get_or_insert_id(&mut self, point: &str) -> PID {
+        if let Some(id) = self.get_id(point) {
+            *id
+        } else {
+            let id = self.fig.new_point();
+            self.points.insert(point.to_owned(), id);
+            id
+        }
+    }
+    pub fn get_id(&self, point: &str) -> Option<&PID> {
+        self.points.get_by_left(point)
+    }
+    pub fn get_name(&self, id: &PID) -> Option<&String> {
+        self.points.get_by_right(id)
+    }
+    pub fn add_constraint(&mut self, constraint: Constraint, points: Vec<&str>) {
+        let points = points
+            .into_iter()
+            .map(|p| self.get_or_insert_id(p))
+            .collect();
+        self.fig.add_constraint(constraint, points);
+    }
+    pub fn add_path(&mut self, path: Vec<PathCmd>) {
+        self.paths.push(path);
+    }
+    pub(crate) fn paths<'a>(&'a self) -> std::slice::Iter<'a, Vec<PathCmd>> {
+        self.paths.iter()
+    }
+    pub fn solve(&mut self) -> Result<HashMap<String, Vector>, String> {
+        println!("{:#?}", self.points);
+        let order = order_bfs(&mut self.fig);
+        let positions = solve_brute(order)?;
+        let mut pos_map = HashMap::new();
+        for (i, pos) in positions.into_iter().enumerate() {
+            let Some(id) = self.points.get_by_right(&i) else {
+                return Err("Improper point mapping.".to_owned())
+            };
+            pos_map.insert(id.clone(), pos);
+        }
+        Ok(pos_map)
+    }
+}
+
+pub fn parse_line(line: &str, fig: &mut GCADFigure) -> bool {
     if let Some((points, constraint)) = parse_constraint(line) {
-        doc.add_constraint(constraint, points);
+        fig.add_constraint(constraint, points);
         return true;
     }
     if let Some(constraints) = parse_equality(line) {
         for (points, constraint) in constraints {
-            doc.add_constraint(constraint, points);
-            return true;
+            fig.add_constraint(constraint, points);
         }
+        return true;
     }
     if let Some(path) = parse_path(line) {
-        doc.add_path(path);
+        fig.add_path(path);
         return true;
     }
     false
@@ -80,12 +121,12 @@ pub fn parse_equality<'a>(line: &'a str) -> Option<Vec<(Vec<&'a str>, Constraint
     }
     let mut value = None;
     let mut elements: Vec<(Vec<&str>, Element)> = Vec::new();
-    for expr in line.split("=") {
+    'exprs: for expr in line.split("=") {
         let expr = expr.trim();
         for parser in PARSERS {
             if let Some(element) = parser(expr) {
                 elements.push(element);
-                break;
+                continue 'exprs;
             }
         }
         if let Ok(parsed) = expr.parse::<Number>() {
@@ -225,7 +266,6 @@ fn parse_chirality<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Constraint)>
     }
     Some((points, Constraint::Chirality(polarities)))
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathCmd {

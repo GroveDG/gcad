@@ -1,13 +1,26 @@
 use std::{collections::HashMap, fs::File, io::Write};
 
+use gsolve::math::{Number, Vector};
 use rsille::Canvas;
 
-use crate::{
-    document::{Document, PathCmd},
-    math::{bounding_box, Number, Vector},
-};
+use crate::{parse::PathCmd, GCADFigure};
 
-pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &Document) {
+pub fn bounding_box<'a, I>(vectors: I) -> (Vector, Vector)
+where
+    I: IntoIterator<Item = &'a Vector>,
+{
+    let mut min = Vector::POSINF;
+    let mut max = Vector::NEGINF;
+    for v in vectors.into_iter() {
+        if v.x < min.x { min.x = v.x }
+        if v.y < min.y { min.y = v.y }
+        if v.x > max.x { max.x = v.x }
+        if v.y > max.y { max.y = v.y }
+    }
+    (min, max)
+}
+
+pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &GCADFigure) {
     let (mut min, mut max) = bounding_box(positions.values());
 
     let mut size = max - min;
@@ -56,7 +69,7 @@ pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &Document) 
     canvas.print();
 }
 
-pub fn draw_svg(mut positions: HashMap<String, Vector>, figure: &Document) -> std::io::Result<()> {
+pub fn draw_svg(mut positions: HashMap<String, Vector>, figure: &GCADFigure) -> std::io::Result<()> {
     let (min, max) = bounding_box(positions.values());
     let size = max - min;
     let (size_x, size_y) = size.into();

@@ -1,11 +1,17 @@
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
 
+use bimap::BiMap;
 use clap::Parser;
 use clap_derive::ValueEnum;
-use gsolve::document::{order_bfs, solve_brute, draw_svg, draw_terminal, Figure};
+use draw::{draw_svg, draw_terminal};
+use gsolve::{Figure, PID};
+use parse::PathCmd;
+
+mod draw;
+mod parse;
+mod parsing;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Output {
@@ -32,33 +38,37 @@ struct CLIArgs {
     verbose: bool,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct GCADFigure {
+    pub fig: Figure,
+    points: BiMap<String, PID>,
+    paths: Vec<Vec<PathCmd>>,
+}
+
 fn main() -> Result<(), String> {
     let args = CLIArgs::parse();
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
-    let mut doc: Figure = contents.parse()?;
+    let mut fig: GCADFigure = contents.parse()?;
+    let positions = fig.solve()?;
 
-    if args.verbose {
-        print_heading("Constraints");
-        for c in doc.constraints() {
-            println!("{:?}", c);
-        }
-    }
+    // if args.verbose {
+    //     print_heading("Constraints");
+    //     for c in fig.fig {
+    //         println!("{:?}", c);
+    //     }
+    // }
 
-    let order = order_bfs(&mut doc);
-
-    if args.verbose {
-        print_heading("Constraints by Point");
-        for (id, cs) in order.iter().enumerate() {
-            println!("{}:", doc.get_point(&id));
-            for &c in cs {
-                println!(" {}", doc.get_constraint(c));
-            }
-        }
-    }
-
-    let positions = solve_brute(&mut doc, order)?;
+    // if args.verbose {
+    //     print_heading("Constraints by Point");
+    //     for (id, cs) in order.iter().enumerate() {
+    //         println!("{}:", fig.get_point(&id));
+    //         for &c in cs {
+    //             println!(" {}", fig.get_constraint(c));
+    //         }
+    //     }
+    // }
 
     if args.verbose {
         print_heading("Positions");
@@ -71,16 +81,18 @@ fn main() -> Result<(), String> {
             Output::CSV => {
                 let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
                 for (point, pos) in positions.iter() {
-                    csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
-                        .map_err(|e| e.to_string())?;
+                    csv.write(
+                        format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes(),
+                    )
+                    .map_err(|e| e.to_string())?;
                 }
             }
             Output::SVG => {
-                draw_svg(positions, &doc).map_err(|e| e.to_string())?;
+                draw_svg(positions, &fig).map_err(|e| e.to_string())?;
             }
             Output::Terminal => {
                 print_heading("Figure");
-                draw_terminal(positions, &doc);
+                draw_terminal(positions, &fig);
             }
         }
     }
