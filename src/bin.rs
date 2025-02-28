@@ -53,23 +53,6 @@ fn main() -> Result<(), String> {
     let mut fig: GCADFigure = contents.parse()?;
     let positions = fig.solve()?;
 
-    // if args.verbose {
-    //     print_heading("Constraints");
-    //     for c in fig.fig {
-    //         println!("{:?}", c);
-    //     }
-    // }
-
-    // if args.verbose {
-    //     print_heading("Constraints by Point");
-    //     for (id, cs) in order.iter().enumerate() {
-    //         println!("{}:", fig.get_point(&id));
-    //         for &c in cs {
-    //             println!(" {}", fig.get_constraint(c));
-    //         }
-    //     }
-    // }
-
     if args.verbose {
         print_heading("Positions");
         for (point, pos) in positions.iter() {
