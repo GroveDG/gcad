@@ -11,7 +11,6 @@ use parse::PathCmd;
 
 mod draw;
 mod parse;
-mod parsing;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Output {
