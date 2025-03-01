@@ -21,3 +21,4 @@ clap_derive = { version = "4.0.0-rc.1" }
 rsille = "2.3.1"
 term_size = "0.3.2"
 gsolve = { path = "../gsolve" }
+inquire = "0.7.5"

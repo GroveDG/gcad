@@ -1,12 +1,16 @@
+use std::env::args;
+use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bimap::BiMap;
 use clap::Parser;
 use clap_derive::ValueEnum;
 use draw::{draw_svg, draw_terminal};
 use gsolve::{Figure, PID};
+use inquire::validator::Validation;
+use inquire::{CustomUserError, Select, Text};
 use parse::PathCmd;
 
 mod draw;
@@ -20,6 +24,15 @@ pub enum Output {
     CSV,
     /// Saves figure as SVG.
     SVG,
+}
+impl Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Output::Terminal => "Terminal",
+            Output::CSV => "CSV",
+            Output::SVG => "SVG",
+        })
+    }
 }
 #[derive(Debug, Clone, Default)]
 pub struct DrawOptions {
@@ -44,8 +57,34 @@ pub struct GCADFigure {
     paths: Vec<Vec<PathCmd>>,
 }
 
+fn validate_file(input: &str) -> Result<Validation, CustomUserError> {
+    if Path::new(input).is_file() {
+        Ok(Validation::Valid)
+    } else {
+        Ok(inquire::validator::Validation::Invalid(
+            "File does not exist.".into(),
+        ))
+    }
+}
+
 fn main() -> Result<(), String> {
-    let args = CLIArgs::parse();
+    let args = if args().len() == 1 {
+        let file = Text::new("File:")
+            .with_validator(validate_file)
+            .prompt()
+            .map_err(|e| e.to_string())?
+            .into();
+        let output = Select::new("Output:", vec![Output::SVG, Output::Terminal, Output::CSV])
+            .prompt_skippable()
+            .map_err(|e| e.to_string())?;
+        CLIArgs {
+            file,
+            output,
+            verbose: false,
+        }
+    } else {
+        CLIArgs::parse()
+    };
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
@@ -63,10 +102,8 @@ fn main() -> Result<(), String> {
             Output::CSV => {
                 let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
                 for (point, pos) in positions.iter() {
-                    csv.write(
-                        format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes(),
-                    )
-                    .map_err(|e| e.to_string())?;
+                    csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
+                        .map_err(|e| e.to_string())?;
                 }
             }
             Output::SVG => {
