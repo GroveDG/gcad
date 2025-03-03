@@ -1,6 +1,9 @@
 [package]
-name = "gcad-rs"
+name = "gcad"
 version = "0.1.0"
+authors = ["GroveDG"]
+description = "2D CAD with geometry notation"
+repository = "https://github.com/GroveDG/gcad"
 edition = "2021"
 
 [[bin]]
