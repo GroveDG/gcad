@@ -4,20 +4,18 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use bimap::BiMap;
 use clap::Parser;
 use clap_derive::ValueEnum;
 use draw::{draw_svg, draw_terminal};
-use gsolve::{Figure, PID};
 use inquire::validator::Validation;
 use inquire::{CustomUserError, Select, Text};
-use parse::PathCmd;
+use parse::GCADFigure;
 
 mod draw;
 mod parse;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum Output {
+enum Output {
     /// Prints figure.
     Terminal,
     /// Saves points as CSV.
@@ -34,10 +32,6 @@ impl Display for Output {
         })
     }
 }
-#[derive(Debug, Clone, Default)]
-pub struct DrawOptions {
-    pub output: Option<Output>,
-}
 
 #[derive(Parser)]
 struct CLIArgs {
@@ -48,13 +42,6 @@ struct CLIArgs {
     output: Option<Output>,
     #[arg(short, long)]
     verbose: bool,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct GCADFigure {
-    pub fig: Figure,
-    points: BiMap<String, PID>,
-    paths: Vec<Vec<PathCmd>>,
 }
 
 fn validate_file(input: &str) -> Result<Validation, CustomUserError> {
@@ -88,7 +75,7 @@ fn main() -> Result<(), String> {
 
     let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
 
-    let mut fig: GCADFigure = contents.parse()?;
+    let fig: GCADFigure = contents.parse()?;
     let positions = fig.solve()?;
 
     if args.verbose {
@@ -119,7 +106,7 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-pub fn print_heading(s: &str) {
+fn print_heading(s: &str) {
     let style = { ansi_term::Style::new().underline() };
     println!(
         "\n\n{}\n",

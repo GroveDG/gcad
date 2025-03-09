@@ -1,10 +1,21 @@
+//! GCAD drawing.
+//! 
+//! GCAD is compatible with a wide variety of drawing and image formats.
+//! GCAD's drawing features are derived from SVG and SVG is the primary
+//! format in consideration for drawing features.
+//! 
+//! Developers looking to integrate GCAD into their programs may benefit
+//! from extending or modifying drawing features for their specific
+//! feature set.
+
 use std::{collections::HashMap, fs::File, io::Write};
 
 use gsolve::math::{Number, Vector};
 use rsille::Canvas;
 
-use crate::{parse::PathCmd, GCADFigure};
+use crate::parse::{PathCmd, GCADFigure};
 
+/// Calculate the bounding box of gsolve vectors.
 pub fn bounding_box<'a, I>(vectors: I) -> (Vector, Vector)
 where
     I: IntoIterator<Item = &'a Vector>,
@@ -20,6 +31,7 @@ where
     (min, max)
 }
 
+/// Draw [GCADFigure] to terminal.
 pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &GCADFigure) {
     let (mut min, mut max) = bounding_box(positions.values());
 
@@ -69,6 +81,7 @@ pub fn draw_terminal(mut positions: HashMap<String, Vector>, figure: &GCADFigure
     canvas.print();
 }
 
+/// Draw [GCADFigure] to SVG.
 pub fn draw_svg(mut positions: HashMap<String, Vector>, figure: &GCADFigure) -> std::io::Result<()> {
     let (min, max) = bounding_box(positions.values());
     let size = max - min;
