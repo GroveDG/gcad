@@ -1,7 +1,8 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     f64::consts::{PI, TAU},
     fmt::Display,
+    hash::RandomState,
     mem::take,
 };
 
@@ -44,20 +45,28 @@ pub struct Figure {
 impl Figure {
     fn add_recursive(
         &mut self,
-        node: &String,
+        target: &String,
         tree: &MultiMap<String, String>,
         map: &mut MultiMap<String, Statement>,
     ) {
-        let Some(quantities) = map.get_vec_mut(node) else {
+        // Return if the point is already added.
+        let Some(statements) = map.get_vec(target) else {
             return;
         };
-        let quantities = take(quantities)
+        // Returns if dependencies are unsatisfied.
+        let Some(quantities) = statements
             .into_iter()
             .map(|s| s.quantity(&self.point_map))
-            .collect();
+            .collect()
+        else {
+            return;
+        };
+        // Add point and mark as known.
         let pid = self.order.add_point(quantities);
-        self.point_map.insert(node.clone(), pid);
-        for next in tree.get_vec(node).map(|v| v.iter()).unwrap_or_default() {
+        self.point_map.insert(target.clone(), pid);
+        map.remove(target); // Unfortunate drop.
+        // Add all dependents.
+        for next in tree.get_vec(target).map(|v| v.iter()).unwrap_or_default() {
             self.add_recursive(next, tree, map);
         }
     }
@@ -65,19 +74,29 @@ impl Figure {
         let mut map = MultiMap::new();
         let mut roots = Vec::new();
         let mut tree = MultiMap::new();
+
+        // Set up roots and mapping.
+        // For each statement...
         for statement in statements {
+            // Origins are roots.
             if let StatementType::Origin(_) = statement.s_type {
                 roots.push(statement.target.clone());
             }
+            // Link dependencies to the target.
             for dependency in statement.points.iter().cloned() {
                 tree.insert(dependency, statement.target.clone());
             }
+            // Map the target to their statements.
             map.insert(statement.target.clone(), statement);
         }
+
         let mut fig = Figure::default();
+        // Starting from each root...
         for root in roots {
+            // Add points when their depencencies are satisfied.
             fig.add_recursive(&root, &tree, &mut map)
         }
+
         Ok(fig)
     }
 }
@@ -123,8 +142,8 @@ impl Display for Statement {
     }
 }
 impl Statement {
-    fn quantity(self, point_map: &HashMap<String, PID>) -> Quantity {
-        Quantity {
+    fn quantity(&self, point_map: &HashMap<String, PID>) -> Option<Quantity> {
+        Some(Quantity {
             func: match self.s_type {
                 StatementType::Origin(v) => Box::new(move |_| vec![Geo::Point(v)]),
                 StatementType::Distance(n) => Box::new(move |pos| vec![Geo::Circle(pos[0], n)]),
@@ -135,9 +154,9 @@ impl Statement {
             points: self
                 .points
                 .iter()
-                .map(|p| *point_map.get(p).unwrap())
-                .collect(),
-        }
+                .map(|p| point_map.get(p).cloned())
+                .collect::<Option<Vec<_>>>()?,
+        })
     }
 }
 
