@@ -1,122 +1,46 @@
-use std::env::args;
-use std::fmt::Display;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::{Path, PathBuf};
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use clap::Parser;
-use clap_derive::ValueEnum;
-use draw::{draw_svg, draw_terminal};
-use inquire::validator::Validation;
-use inquire::{CustomUserError, Select, Text};
-use parse::GCADFigure;
-
-mod draw;
 mod parse;
+use eframe::{egui::{self, Color32, Pos2, Rect, Sense, Spacing, Stroke, TextEdit}, emath::RectTransform};
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum Output {
-    /// Prints figure.
-    Terminal,
-    /// Saves points as CSV.
-    CSV,
-    /// Saves figure as SVG.
-    SVG,
-}
-impl Display for Output {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Output::Terminal => "Terminal",
-            Output::CSV => "CSV",
-            Output::SVG => "SVG",
-        })
-    }
-}
-
-#[derive(Parser)]
-struct CLIArgs {
-    /// Path to GCAD file.
-    file: PathBuf,
-    /// Output for solved figure.
-    #[arg(value_enum)]
-    output: Option<Output>,
-    #[arg(short, long)]
-    verbose: bool,
-}
-
-fn validate_file(input: &str) -> Result<Validation, CustomUserError> {
-    if Path::new(input).is_file() {
-        Ok(Validation::Valid)
-    } else {
-        Ok(inquire::validator::Validation::Invalid(
-            "File does not exist.".into(),
-        ))
-    }
-}
-
-fn main() -> Result<(), String> {
-    let args = if args().len() == 1 {
-        let file = Text::new("File:")
-            .with_validator(validate_file)
-            .prompt()
-            .map_err(|e| e.to_string())?
-            .into();
-        let output = Select::new("Output:", vec![Output::SVG, Output::Terminal, Output::CSV])
-            .prompt_skippable()
-            .map_err(|e| e.to_string())?;
-        CLIArgs {
-            file,
-            output,
-            verbose: false,
-        }
-    } else {
-        CLIArgs::parse()
+fn main() -> eframe::Result {
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
+        ..Default::default()
     };
-
-    let contents = fs::read_to_string(args.file).map_err(|e| format!("{e}"))?;
-
-    let fig: GCADFigure = contents.parse()?;
-    let positions = fig.solve()?;
-
-    if args.verbose {
-        print_heading("Positions");
-        for (point, pos) in positions.iter() {
-            println!("{}: {}", point, pos);
-        }
-    }
-    if let Some(output) = args.output {
-        match output {
-            Output::CSV => {
-                let mut csv = File::create("figure.csv").map_err(|e| format!("{e}"))?;
-                for (point, pos) in positions.iter() {
-                    csv.write(format!("{}, {}, {}\n", point, pos.x, pos.y).as_bytes())
-                        .map_err(|e| e.to_string())?;
-                }
-            }
-            Output::SVG => {
-                draw_svg(positions, &fig).map_err(|e| e.to_string())?;
-            }
-            Output::Terminal => {
-                print_heading("Figure");
-                draw_terminal(positions, &fig);
-            }
-        }
-    }
-
-    Ok(())
+    eframe::run_native("GCAD", options, Box::new(|_| Ok(Box::<MyApp>::default())))
 }
 
-fn print_heading(s: &str) {
-    let style = { ansi_term::Style::new().underline() };
-    println!(
-        "\n\n{}\n",
-        style.paint(
-            [
-                s,
-                " ".repeat(term_size::dimensions().unwrap().0 - s.len())
-                    .as_str(),
-            ]
-            .concat()
-        )
-    );
+#[derive(Default)]
+struct MyApp {
+    document: String,
+}
+
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::SidePanel::left("document").show(ctx, |ui| {
+            ui.add_sized(
+                ui.available_size(),
+                TextEdit::multiline(&mut self.document)
+                    .code_editor()
+                    .margin(0.),
+            );
+        });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let fig = match parse::parse(&self.document) {
+                Ok(fig) => fig,
+                Err(e) => return println!("{}", e),
+            };
+            let pos = match fig.order.solve() {
+                Ok(pos) => pos,
+                Err(e) => return println!("{}", e),
+            };
+            for p in pos {
+                println!("{}", p);
+            }
+            let (response, canvas) = ui.allocate_painter(ui.available_size(), Sense::empty());
+            // let transform = RectTransform::from_to(, response.rect);
+            canvas.circle(Pos2::ZERO, 2000., Color32::WHITE, Stroke::new(10., Color32::RED));
+        });
+    }
 }

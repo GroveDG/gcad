@@ -1,344 +1,314 @@
-//! GCAD parsing.
-//! 
-//! The primary interface for GCAD parsing is [FromStr].
-use std::{collections::HashMap, str::FromStr};
-
-use bimap::BiMap;
-use gsolve::{
-    constraints::{Constraint, Element, Polarity}, math::{Number, Vector}, order::order_bfs, solve::solve_brute, Figure, PID
+use std::{
+    collections::HashMap,
+    f64::consts::{PI, TAU},
+    fmt::Display,
+    mem::take,
 };
 
-/// GCAD wrapper around [gsolve] [Figure].
-#[derive(Debug, Clone, Default)]
-pub struct GCADFigure {
-    /// Internal [gsolve] [Figure].
-    pub fig: Figure,
-    points: BiMap<String, PID>,
-    paths: Vec<Vec<PathCmd>>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ParseErr {
+    Nothing,
+    No(&'static str),
+    Invalid,
+    Extra,
+}
+impl Default for ParseErr {
+    fn default() -> Self {
+        Nothing
+    }
+}
+use ParseErr::*;
+impl Display for ParseErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Nothing => write!(f, "Nothing"),
+            No(s) => write!(f, "No {s}"),
+            Invalid => write!(f, "Invalid"),
+            Extra => write!(f, "Extra"),
+        }
+    }
 }
 
-impl FromStr for GCADFigure {
-    type Err = String;
+use gsolve::{
+    Order, PID,
+    math::{Geo, Number, Vector},
+    order::Quantity,
+};
+use multimap::MultiMap;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut fig = GCADFigure::default();
-        let mut comment = false;
-        for mut line in s.lines() {
-            line = line.trim();
-            if line.is_empty() {
-                continue;
+#[derive(Default)]
+pub struct Figure {
+    pub order: Order,
+    pub point_map: HashMap<String, PID>,
+}
+impl Figure {
+    fn add_recursive(
+        &mut self,
+        node: &String,
+        tree: &MultiMap<String, String>,
+        map: &mut MultiMap<String, Statement>,
+    ) {
+        let Some(quantities) = map.get_vec_mut(node) else {
+            return;
+        };
+        let quantities = take(quantities)
+            .into_iter()
+            .map(|s| s.quantity(&self.point_map))
+            .collect();
+        let pid = self.order.add_point(quantities);
+        self.point_map.insert(node.clone(), pid);
+        for next in tree.get_vec(node).map(|v| v.iter()).unwrap_or_default() {
+            self.add_recursive(next, tree, map);
+        }
+    }
+    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, String> {
+        let mut map = MultiMap::new();
+        let mut roots = Vec::new();
+        let mut tree = MultiMap::new();
+        for statement in statements {
+            if let StatementType::Origin(_) = statement.s_type {
+                roots.push(statement.target.clone());
             }
-            if line.starts_with('\"') {
-                comment = true;
+            for dependency in statement.points.iter().cloned() {
+                tree.insert(dependency, statement.target.clone());
             }
-            if line.ends_with('\"') {
-                comment = false;
-                continue;
-            }
-            if comment {
-                continue;
-            }
-            if !parse_line(line, &mut fig) {
-                return Err(format!("failed to parse line: {line}"));
-            }
+            map.insert(statement.target.clone(), statement);
+        }
+        let mut fig = Figure::default();
+        for root in roots {
+            fig.add_recursive(&root, &tree, &mut map)
         }
         Ok(fig)
     }
 }
 
-impl GCADFigure {
-    /// Get or add [point ID][PID] from point name.
-    pub fn get_or_insert_id(&mut self, point: &str) -> PID {
-        if let Some(id) = self.get_id(point) {
-            *id
-        } else {
-            let id = self.fig.new_point();
-            self.points.insert(point.to_owned(), id);
-            id
-        }
+pub fn parse(document: &str) -> Result<Figure, String> {
+    let mut statements = Vec::new();
+    for line in document.lines() {
+        statements.append(&mut parse_line(line).map_err(|e| e.to_string())?);
     }
-    /// Get [point ID][PID] from point name.
-    pub fn get_id(&self, point: &str) -> Option<&PID> {
-        self.points.get_by_left(point)
-    }
-    /// Get point name from [point ID][PID].
-    pub fn get_name(&self, id: &PID) -> Option<&String> {
-        self.points.get_by_right(id)
-    }
-    /// Add [Constraint] with collection of point names.
-    pub fn add_constraint(&mut self, constraint: Constraint, points: Vec<&str>) {
-        let points = points
-            .into_iter()
-            .map(|p| self.get_or_insert_id(p))
-            .collect();
-        self.fig.add_constraint(constraint, points);
-    }
-    /// Add path from [PathCmds][PathCmd].
-    pub fn add_path(&mut self, path: Vec<PathCmd>) {
-        self.paths.push(path);
-    }
-    pub(crate) fn paths<'a>(&'a self) -> std::slice::Iter<'a, Vec<PathCmd>> {
-        self.paths.iter()
-    }
-    /// Solve inner [Figure].
-    pub fn solve(&self) -> Result<HashMap<String, Vector>, String> {
-        let order = order_bfs(&self.fig);
-        let positions = solve_brute(order)?;
-        let mut pos_map = HashMap::new();
-        for (i, pos) in positions.into_iter().enumerate() {
-            let Some(id) = self.points.get_by_right(&i) else {
-                return Err("Improper point mapping.".to_owned());
-            };
-            pos_map.insert(id.clone(), pos);
-        }
-        Ok(pos_map)
-    }
+    Figure::from_statements(statements)
 }
 
-fn parse_line(line: &str, fig: &mut GCADFigure) -> bool {
-    if let Some((points, constraint)) = parse_constraint(line) {
-        fig.add_constraint(constraint, points);
-        return true;
-    }
-    if let Some(constraints) = parse_equality(line) {
-        for (points, constraint) in constraints {
-            fig.add_constraint(constraint, points);
-        }
-        return true;
-    }
-    if let Some(path) = parse_path(line) {
-        fig.add_path(path);
-        return true;
-    }
-    false
+#[derive(Debug, Clone, Copy)]
+pub enum StatementType {
+    Origin(Vector),
+    Distance(Number),
+    Orientation(Number),
 }
-
-fn parse_constraint<'a>(input: &'a str) -> Option<(Vec<&'a str>, Constraint)> {
-    const PARSERS: &[fn(&str) -> Option<(Vec<&str>, Constraint)>] = &[
-        parse_parallel,
-        parse_perpendicular,
-        parse_collinear,
-        parse_chirality,
-    ];
-    for parser in PARSERS {
-        if let Some(result) = parser(input) {
-            return Some(result);
-        }
-    }
-    None
+#[derive(Debug, Clone)]
+pub struct Statement {
+    target: String,
+    s_type: StatementType,
+    points: Vec<String>,
 }
-
-fn parse_equality<'a>(line: &'a str) -> Option<Vec<(Vec<&'a str>, Constraint)>> {
-    const PARSERS: &[fn(&str) -> Option<(Vec<&str>, Element)>] = &[parse_distance, parse_angle];
-    if !line.contains("=") {
-        return None;
-    }
-    let mut value = None;
-    let mut elements: Vec<(Vec<&str>, Element)> = Vec::new();
-    'exprs: for expr in line.split("=") {
-        let expr = expr.trim();
-        for parser in PARSERS {
-            if let Some(element) = parser(expr) {
-                elements.push(element);
-                continue 'exprs;
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.s_type {
+            StatementType::Origin(v) => {
+                let p = &self.points[0];
+                write!(f, "{p} = {v}")
+            }
+            StatementType::Distance(n) => {
+                let p0 = &self.points[0];
+                let p1 = &self.points[1];
+                write!(f, "|{p0} {p1}| = {n}")
+            }
+            StatementType::Orientation(n) => {
+                let p0 = &self.points[0];
+                let p1 = &self.points[1];
+                write!(f, "<{p0} {p1}> = {n}")
             }
         }
-        if let Ok(parsed) = expr.parse::<Number>() {
-            if value.is_some() {
-                return None;
-            }
-            value = Some(parsed);
-            continue;
-        }
-        return None;
     }
-    let Some(value) = value else {
-        return None;
-    };
-    Some(
-        elements
-            .into_iter()
-            .map(|(points, element)| -> (Vec<&'a str>, Constraint) {
-                (points, Constraint::Element(value, element))
-            })
-            .collect(),
-    )
 }
-
-fn parse_distance<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Element)> {
-    literal("|")(&mut input)?;
-    space(&mut input);
-    let a = word(&mut input)?;
-    space(&mut input)?;
-    let b = word(&mut input)?;
-    space(&mut input);
-    literal("|")(&mut input)?;
-
-    Some((vec![a, b], Element::Distance))
-}
-fn parse_angle<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Element)> {
-    literal("∠")(&mut input).or(literal("<")(&mut input))?;
-    space(&mut input);
-    let a = word(&mut input)?;
-    space(&mut input)?;
-    let b = word(&mut input)?;
-    space(&mut input)?;
-    let c = word(&mut input)?;
-
-    Some((vec![a, b, c], Element::Angle))
-}
-fn parse_parallel<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Constraint)> {
-    let mut points = Vec::new();
-    loop {
-        points.push(word(&mut input)?);
-        space(&mut input)?;
-        points.push(word(&mut input)?);
-        space(&mut input);
-        if literal("∥")(&mut input)
-            .or(literal("||")(&mut input))
-            .is_none()
-        {
-            break;
-        }
-        space(&mut input);
-    }
-    if points.len() < 4 {
-        return None;
-    }
-    Some((points, Constraint::Parallel))
-}
-fn parse_perpendicular<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Constraint)> {
-    let mut points = Vec::new();
-    loop {
-        points.push(word(&mut input)?);
-        space(&mut input)?;
-        points.push(word(&mut input)?);
-        space(&mut input);
-        if literal("⟂")(&mut input)
-            .or(literal("_|_")(&mut input))
-            .is_none()
-        {
-            break;
-        }
-        space(&mut input);
-    }
-    if points.len() < 4 {
-        return None;
-    }
-    Some((points, Constraint::Perpendicular))
-}
-fn parse_collinear<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Constraint)> {
-    let mut points = Vec::new();
-    loop {
-        points.push(word(&mut input)?);
-        space(&mut input);
-        if literal("-")(&mut input).is_none() {
-            break;
-        }
-        space(&mut input);
-    }
-    if points.len() < 3 {
-        return None;
-    }
-    Some((points, Constraint::Collinear))
-}
-fn parse_chirality<'a>(mut input: &'a str) -> Option<(Vec<&'a str>, Constraint)> {
-    let mut polarities = Vec::new();
-    let mut points = Vec::new();
-    loop {
-        polarities.push(
-            if literal("±")(&mut input)
-                .or(literal("+/-")(&mut input))
-                .is_some()
-            {
-                Polarity::Pro
-            } else if literal("∓")(&mut input)
-                .or(literal("-/+")(&mut input))
-                .is_some()
-            {
-                Polarity::Anti
-            } else {
-                return None;
+impl Statement {
+    fn quantity(self, point_map: &HashMap<String, PID>) -> Quantity {
+        Quantity {
+            func: match self.s_type {
+                StatementType::Origin(v) => Box::new(move |_| vec![Geo::Point(v)]),
+                StatementType::Distance(n) => Box::new(move |pos| vec![Geo::Circle(pos[0], n)]),
+                StatementType::Orientation(n) => {
+                    Box::new(move |pos| vec![Geo::Ray(pos[0], Vector::from_angle(n))])
+                }
             },
-        );
-        space(&mut input);
-        literal("∠")(&mut input).or(literal("<")(&mut input))?;
-        space(&mut input);
-        points.push(word(&mut input)?);
-        space(&mut input)?;
-        points.push(word(&mut input)?);
-        space(&mut input)?;
-        points.push(word(&mut input)?);
-        space(&mut input);
-        if literal(",")(&mut input).is_none() {
-            break;
+            points: self
+                .points
+                .iter()
+                .map(|p| *point_map.get(p).unwrap())
+                .collect(),
         }
-        space(&mut input);
     }
-    if polarities.len() < 2 {
-        return None;
-    }
-    Some((points, Constraint::Chirality(polarities)))
 }
 
-/// Single SVG-like path commands.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PathCmd {
-    /// Move to the specified point name without drawing.
-    Move(String),
-    /// Draw a straight line to the specified point name.
-    Line(String),
-    /// Draw a quadratic bezier with the first point name
-    /// as the control point and the second as the end point.
-    Quadratic(String, String),
-    /// Draw a cubic bezier with the first and second point names
-    /// as the control points and the last as the end point.
-    Cubic(String, String, String),
-}
-
-fn parse_path(mut input: &str) -> Option<Vec<PathCmd>> {
-    let mut points = Vec::new();
-    let mut cmds = Vec::new();
-    let mut term = true;
-    loop {
-        points.push(word(&mut input)?);
-        if term {
-            cmds.push(match points.len() {
-                1 => PathCmd::Line(points[0].to_string()),
-                2 => PathCmd::Quadratic(points[0].to_string(), points[1].to_string()),
-                3 => PathCmd::Cubic(
-                    points[0].to_string(),
-                    points[1].to_string(),
-                    points[2].to_string(),
-                ),
-                _ => return None,
-            });
-            points.clear();
-        }
-        term = if literal("→")(&mut input)
-            .or(literal("->")(&mut input))
-            .is_some()
-        {
-            true
-        } else if literal("-")(&mut input).is_some() {
-            false
-        } else {
-            break;
+fn parse_line(line: &str) -> Result<Vec<Statement>, ParseErr> {
+    if line.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut err = Nothing;
+    for parser in [parse_origin, parse_multi_expr] {
+        let e = match (parser)(line) {
+            Ok(s) => return Ok(s),
+            Err(e) => e,
         };
-        space(&mut input);
+        if err == Nothing {
+            err = e;
+        }
+    }
+    Err(err)
+}
+
+fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
+    let exprs: Vec<_> = line.split("=").map(|e| e.trim()).collect();
+
+    let mut errs = Vec::new();
+    let parsers: [(
+        fn(&str) -> Result<(String, Vec<String>), ParseErr>,
+        Box<dyn Fn(&str) -> Result<StatementType, ParseErr>>,
+    ); 2] = [
+        (
+            parse_distance,
+            Box::new(|mut v| Ok(StatementType::Distance(parse_number(&mut v)?))),
+        ),
+        (
+            parse_orientation,
+            Box::new(|mut v| Ok(StatementType::Orientation(parse_number(&mut v)?))),
+        ),
+    ];
+    'parsers: for (expr_parser, value_parser) in parsers {
+        let mut statements = Vec::new();
+        for expr in exprs[..exprs.len() - 1].iter() {
+            let parts = match (expr_parser)(expr) {
+                Ok(c) => c,
+                Err(e) => {
+                    errs.push(e);
+                    continue 'parsers;
+                }
+            };
+            statements.push(parts);
+        }
+        let s_type = if let Some(expr) = exprs.last() {
+            (value_parser)(expr).map_err(|err| match err {
+                Nothing => match (expr_parser)(expr) {
+                    Ok(_) => No("value"),
+                    Err(e) => e,
+                },
+                _ => err,
+            })
+        } else {
+            Err(Nothing)
+        }?;
+        return Ok(statements
+            .into_iter()
+            .map(|(target, points)| Statement {
+                target,
+                s_type,
+                points,
+            })
+            .collect());
     }
 
-    if !points.is_empty() {
-        return None;
-    }
+    let err = errs
+        .into_iter()
+        .reduce(|err, e| if err == Nothing { e } else { err })
+        .unwrap_or_default();
+    Err(err)
+}
 
-    // Starting M (Move) command
-    cmds[0] = match &cmds[0] {
-        PathCmd::Line(p) => PathCmd::Move(p.clone()),
-        _ => unreachable!(),
+// fn parse_expr(expr: &str, value: Number) -> Result<Statement, ParseErr> {
+//     let mut err = Nothing;
+//         let e = match (parser)(expr, value) {
+//             Ok(s) => return Ok(s),
+//             Err(e) => e,
+//         };
+//         if err == Nothing {
+//             err = e;
+//         }
+//     }
+//     Err(err)
+// }
+
+fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
+    let p = word(&mut expr).ok_or(Nothing)?;
+    space(&mut expr);
+    let v = if literal("=")(&mut expr).is_some() {
+        parse_vector(expr.trim())?
+    } else {
+        Vector::ZERO
     };
+    Ok(vec![Statement {
+        target: p.to_string(),
+        s_type: StatementType::Origin(v),
+        points: vec![],
+    }])
+}
 
-    Some(cmds)
+fn parse_distance(mut expr: &str) -> Result<(String, Vec<String>), ParseErr> {
+    literal("|")(&mut expr).ok_or(Nothing)?;
+    space(&mut expr);
+    let p0 = word(&mut expr).ok_or(No("point"))?;
+    space(&mut expr).ok_or(No("space"))?;
+    let p1 = word(&mut expr).ok_or(No("point"))?;
+    space(&mut expr);
+    literal("|")(&mut expr).ok_or(No("|"))?;
+    end(expr).ok_or(Extra)?;
+    Ok((p1.to_string(), vec![p0.to_string()]))
+}
+
+fn parse_orientation(mut expr: &str) -> Result<(String, Vec<String>), ParseErr> {
+    literal("<")(&mut expr).ok_or(Nothing)?;
+    space(&mut expr);
+    let p0 = word(&mut expr).ok_or(No("point"))?;
+    space(&mut expr).ok_or(No("space"))?;
+    let p1 = word(&mut expr).ok_or(No("point"))?;
+    space(&mut expr);
+    literal(">")(&mut expr).ok_or(No(">"))?;
+    end(expr).ok_or(Extra)?;
+    Ok((p1.to_string(), vec![p0.to_string()]))
+}
+
+fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
+    literal("(")(&mut expr).ok_or(Nothing)?;
+    space(&mut expr);
+    let x = parse_number(&mut expr).map_err(|e| match e {
+        Nothing => No("number"),
+        _ => Invalid,
+    })?;
+    space(&mut expr);
+    println!("{} {}", expr, x);
+    literal(",")(&mut expr).ok_or(No(","))?;
+    space(&mut expr);
+    let y = parse_number(&mut expr).map_err(|e| match e {
+        Nothing => No("number"),
+        _ => Invalid,
+    })?;
+    space(&mut expr);
+    literal(")")(&mut expr).ok_or(No(")"))?;
+    Ok(Vector { x, y })
+}
+
+fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
+    if literal("PI")(expr).is_some()
+        || literal("Pi")(expr).is_some()
+        || literal("pi")(expr).is_some()
+        || literal("π")(expr).is_some()
+    {
+        return Ok(PI);
+    }
+    if literal("TAU")(expr).is_some()
+        || literal("Tau")(expr).is_some()
+        || literal("tau")(expr).is_some()
+        || literal("τ")(expr).is_some()
+    {
+        return Ok(TAU);
+    }
+    let n = take_while(
+        |c| c.is_ascii_digit() || c == '+' || c == '-' || c == '.',
+        1,
+        usize::MAX,
+    )(expr)
+    .ok_or(Nothing)?;
+    n.parse().map_err(|_| Invalid)
 }
 
 const fn take_while<'a>(
@@ -380,4 +350,8 @@ const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Option<&'a st
         *i = i.strip_prefix(pattern)?;
         Some(pattern)
     }
+}
+
+const fn end(input: &str) -> Option<()> {
+    if input.is_empty() { Some(()) } else { None }
 }
