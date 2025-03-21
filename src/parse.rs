@@ -16,7 +16,6 @@ impl Default for ParseErr {
         Nothing
     }
 }
-use regex::Regex;
 use ParseErr::*;
 use meval::eval_str_with_context;
 impl Display for ParseErr {
@@ -304,10 +303,7 @@ fn parse_math(expr: &mut &str) -> Result<Number, ParseErr> {
     ctx.var("pi", PI)
         .var("tau", TAU)
         .var("e", E);
-    meval::eval_str_with_context(expr, ctx).map_err(|e| {
-        println!("{}", e);
-        Invalid
-    })
+    eval_str_with_context(expr, ctx).map_err(|_| Invalid)
 }
 
 const fn take_while<'a>(
