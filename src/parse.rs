@@ -1,8 +1,7 @@
 use std::{
-    collections::{HashMap, VecDeque},
-    f64::consts::{PI, TAU},
+    collections::HashMap,
+    f64::consts::{E, PI, TAU},
     fmt::Display,
-    ops::{Add, Div, Mul, Sub},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,7 +16,9 @@ impl Default for ParseErr {
         Nothing
     }
 }
+use regex::Regex;
 use ParseErr::*;
+use meval::eval_str_with_context;
 impl Display for ParseErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -233,19 +234,6 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
     Err(err)
 }
 
-// fn parse_expr(expr: &str, value: Number) -> Result<Statement, ParseErr> {
-//     let mut err = Nothing;
-//         let e = match (parser)(expr, value) {
-//             Ok(s) => return Ok(s),
-//             Err(e) => e,
-//         };
-//         if err == Nothing {
-//             err = e;
-//         }
-//     }
-//     Err(err)
-// }
-
 fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
     let p = word(&mut expr).ok_or(Nothing)?;
     space(&mut expr);
@@ -288,14 +276,14 @@ fn parse_orientation(mut expr: &str) -> Result<(String, Vec<String>), ParseErr> 
 fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
     literal("(")(&mut expr).ok_or(Nothing)?;
     space(&mut expr);
-    let x = parse_number(&mut expr).map_err(|e| match e {
+    let x = parse_math(&mut expr).map_err(|e| match e {
         Nothing => No("number"),
         _ => Invalid,
     })?;
     space(&mut expr);
     literal(",")(&mut expr).ok_or(No(","))?;
     space(&mut expr);
-    let y = parse_number(&mut expr).map_err(|e| match e {
+    let y = parse_math(&mut expr).map_err(|e| match e {
         Nothing => No("number"),
         _ => Invalid,
     })?;
@@ -304,160 +292,22 @@ fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
     Ok(Vector { x, y })
 }
 
-#[derive(Debug)]
-enum Math {
-    Operand(Operand),
-    Operator(Op),
-}
-#[derive(Debug)]
-enum Operand {
-    Constant(Number),
-}
-
-// https://mathcenter.oxford.emory.edu/site/cs171/shuntingYardAlgorithm/
 fn parse_math(expr: &mut &str) -> Result<Number, ParseErr> {
-    let mut output = Vec::new();
-    let mut stack: Vec<Op> = Vec::new();
-    while !expr.is_empty() {
-        output.push(Math::Operand(Operand::Constant(parse_number(expr)?)));
-        let Some(op) = parse_op(expr) else {
-            break;
-        };
-        match op {
-            Op::LPn => {
-                stack.push(op);
-            }
-            Op::RPn => {
-                loop {
-                    let op = stack.pop().ok_or(No("("))?;
-                    if op == Op::LPn {
-                        break;
-                    }
-                    output.push(Math::Operator(op));
-                }
-            }
-            _ => {
-                let Some(&o) = stack.last() else {
-                    stack.push(op);
-                    continue;
-                };
-                if o == Op::LPn || op > o || (op == o && op.is_r_assoc()) {
-                    stack.push(op);
-                    continue;
-                }
-                while stack.last().is_some_and(|&o| op < o || (op == o && !op.is_r_assoc())) {
-                    output.push(Math::Operator(stack.pop().unwrap()));
-                }
-                stack.push(op);
-            }
-        }
-    }
-    for op in stack.into_iter().rev() {
-        output.push(Math::Operator(op));
-    }
-    Ok(compute_math(output)?)
-}
-
-fn compute_math(math: Vec<Math>) -> Result<Number, ParseErr> {
-    let mut stack = VecDeque::new();
-    println!("{:?}", math);
-    for m in math {
-        match m {
-            Math::Operand(o) => stack.push_back(match o {
-                Operand::Constant(n) => n,
-            }),
-            Math::Operator(op) => {
-                let lhs = stack.pop_front().ok_or(Invalid)?;
-                let rhs = stack.pop_front().ok_or(Invalid)?;
-                stack.push_back((op.func().ok_or(Invalid)?)(lhs, rhs));
-            }
-        }
-    }
-    if stack.len() != 1 {
-        return Err(Invalid);
-    }
-    Ok(stack[0])
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Op {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Pow,
-    LPn,
-    RPn,
-}
-impl Op {
-    fn func(&self) -> Option<fn(Number, Number) -> Number> {
-        match self {
-            Op::Add => Some(Add::add),
-            Op::Sub => Some(Sub::sub),
-            Op::Mul => Some(Mul::mul),
-            Op::Div => Some(Div::div),
-            Op::Pow => Some(Number::powf),
-            _ => None,
-        }
-    }
-    fn precedence(&self) -> Option<u8> {
-        match self {
-            Op::Add | Op::Sub => Some(0),
-            Op::Mul | Op::Div => Some(1),
-            Op::Pow => Some(2),
-            Op::LPn | Op::RPn => None,
-        }
-    }
-    fn is_r_assoc(&self) -> bool {
-        match self {
-            Op::Pow => true,
-            _ => false,
-        }
-    }
-}
-impl PartialOrd for Op {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.precedence().partial_cmp(&other.precedence())
-    }
-}
-fn parse_op(expr: &mut &str) -> Option<Op> {
-    let mut chars = expr.chars();
-    let op = match chars.next().unwrap_or_default() {
-        '+' => Op::Add,
-        '-' => Op::Sub,
-        '*' | '×' => Op::Mul,
-        '/' | '÷' => Op::Div,
-        '^' => Op::Pow,
-        '(' => Op::LPn,
-        ')' => Op::RPn,
-        _ => return None,
-    };
-    *expr = chars.as_str();
-    Some(op)
-}
-
-fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
-    if literal("PI")(expr).is_some()
-        || literal("Pi")(expr).is_some()
-        || literal("pi")(expr).is_some()
-        || literal("π")(expr).is_some()
-    {
-        return Ok(PI);
-    }
-    if literal("TAU")(expr).is_some()
-        || literal("Tau")(expr).is_some()
-        || literal("tau")(expr).is_some()
-        || literal("τ")(expr).is_some()
-    {
-        return Ok(TAU);
-    }
-    let n = take_while(
-        |c| c.is_ascii_digit() || c == '+' || c == '-' || c == '.',
-        1,
-        usize::MAX,
-    )(expr)
-    .ok_or(Nothing)?;
-    n.parse().map_err(|_| Invalid)
+    let mut ctx = meval::Context::empty();
+    let expr = expr
+        .replace("×", "*")
+        .replace("÷", "/")
+        .replace("τ", "TAU")
+        .replace("π", "PI")
+        .replace("TAU", "tau")
+        .replace("PI", "pi");
+    ctx.var("pi", PI)
+        .var("tau", TAU)
+        .var("e", E);
+    meval::eval_str_with_context(expr, ctx).map_err(|e| {
+        println!("{}", e);
+        Invalid
+    })
 }
 
 const fn take_while<'a>(

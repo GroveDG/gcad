@@ -22,4 +22,5 @@ strip = true        # Strip symbols from binary*
 [dependencies]
 eframe = "0.31.1"
 gsolve = { path = "../gsolve" }
+meval = "0.2.0"
 multimap = "0.10.0"
