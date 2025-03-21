@@ -1,9 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     f64::consts::{PI, TAU},
     fmt::Display,
-    hash::RandomState,
-    mem::take,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,7 +292,6 @@ fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
         _ => Invalid,
     })?;
     space(&mut expr);
-    println!("{} {}", expr, x);
     literal(",")(&mut expr).ok_or(No(","))?;
     space(&mut expr);
     let y = parse_number(&mut expr).map_err(|e| match e {

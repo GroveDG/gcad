@@ -1,7 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 mod parse;
-use eframe::{egui::{self, Color32, Pos2, Rect, Sense, Spacing, Stroke, TextEdit}, emath::RectTransform};
+
+use eframe::{
+    egui::{self, Color32, Pos2, Rect, Sense, Stroke, TextEdit, Ui},
+    emath::RectTransform,
+};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -35,12 +39,53 @@ impl eframe::App for MyApp {
                 Ok(pos) => pos,
                 Err(e) => return println!("{}", e),
             };
-            for p in pos {
-                println!("{}", p);
-            }
-            let (response, canvas) = ui.allocate_painter(ui.available_size(), Sense::empty());
-            // let transform = RectTransform::from_to(, response.rect);
-            canvas.circle(Pos2::ZERO, 2000., Color32::WHITE, Stroke::new(10., Color32::RED));
+            let pos: Vec<_> = pos
+                .into_iter()
+                .map(|p| Pos2 {
+                    x: p.x as f32,
+                    y: p.y as f32,
+                })
+                .collect();
+            let Some(bb) = bounding_box(&pos) else { return };
+            let a = bb.size().x / bb.size().y;
+            let mut size = ui.available_size();
+            let b = size.x / size.y;
+            let centerer = if a <= b {
+                size.x = size.y * a;
+                Ui::vertical_centered
+            } else {
+                size.y = size.x / a;
+                Ui::horizontal_centered
+            };
+            (centerer)(ui, |ui: &mut Ui| {
+                let (response, canvas) = ui.allocate_painter(size, Sense::empty());
+                let transform = RectTransform::from_to(bb, response.rect);
+                for p in pos {
+                    canvas.circle(transform.transform_pos(p), 1., Color32::WHITE, Stroke::NONE);
+                }
+                response
+            });
         });
     }
+}
+
+fn bounding_box(pos: &[Pos2]) -> Option<Rect> {
+    if pos.is_empty() {
+        return None;
+    }
+    let mut min = pos[0];
+    let mut max = pos[0];
+    for p in pos {
+        min.x = min.x.min(p.x);
+        min.y = min.y.min(p.y);
+        max.x = max.x.max(p.x);
+        max.y = max.y.max(p.y);
+    }
+    let size = max - min;
+    let margin = (size.x.max(size.y) * 0.25).max(1.);
+    min.x -= margin;
+    min.y -= margin;
+    max.x += margin;
+    max.y += margin;
+    Some(Rect { min, max })
 }
