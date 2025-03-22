@@ -21,7 +21,7 @@ impl MathExpr {
 
         for m in &self.expr {
             match m {
-                Math::Operand(o) => stack.push_back(match o {
+                Math::Operand(o) => stack.push_front(match o {
                     Operand::Constant(n) => {
                         let n = *n;
                         Box::new(move |_| n)
@@ -34,10 +34,10 @@ impl MathExpr {
                     },
                 }),
                 Math::Operator(op) => {
-                    let lhs = stack.pop_front().ok_or(Invalid)?;
                     let rhs = stack.pop_front().ok_or(Invalid)?;
+                    let lhs = stack.pop_front().ok_or(Invalid)?;
                     let op_func = op.func().ok_or(Invalid)?;
-                    stack.push_back(Box::new(move |pos| (op_func)(lhs(pos), rhs(pos))));
+                    stack.push_front(Box::new(move |pos| (op_func)(lhs(pos), rhs(pos))));
                 }
             }
         }
@@ -63,7 +63,15 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     let mut output = Vec::new();
     let mut stack: Vec<Op> = Vec::new();
 
-    while !expr.is_empty() {
+    'parsing: loop {
+        while let Some(op) = parse_op(&mut expr) {
+            if op != Op::LPn {
+                println!("{}", expr);
+                return Err(Invalid);
+            }
+            stack.push(op);
+            space(&mut expr);
+        }
         output.push(Math::Operand(
             parse_distance(&mut expr)
                 .map(|p| Operand::Quantity(QuantityType::Distance, p))
@@ -74,36 +82,39 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
                 .or_else(|_| parse_number(&mut expr).map(|n| Operand::Constant(n)))?,
         ));
         space(&mut expr);
-        let Some(op) = parse_op(&mut expr) else {
-            if !expr.is_empty() {
-                return Err(Extra);
+        let op = loop {
+            let Some(op) = parse_op(&mut expr) else {
+                if !expr.is_empty() {
+                    return Err(Extra);
+                } else {
+                    break 'parsing;
+                }
+            };
+            if op == Op::RPn {
+                loop {
+                    let op = stack.pop().ok_or(No("("))?;
+                    if op == Op::LPn {
+                        break;
+                    }
+                    output.push(Math::Operator(op));
+                }
+            } else {
+                break op;
             }
-            break;
         };
         space(&mut expr);
         match op {
-            Op::LPn => {
-                stack.push(op);
+            Op::LPn | Op::RPn => {
+                return Err(Invalid);
             }
-            Op::RPn => loop {
-                let op = stack.pop().ok_or(No("("))?;
-                if op == Op::LPn {
-                    break;
-                }
-                output.push(Math::Operator(op));
-            },
             _ => {
                 let Some(&o) = stack.last() else {
                     stack.push(op);
                     continue;
                 };
-                if o == Op::LPn || op > o || (op == o && op.is_r_assoc()) {
-                    stack.push(op);
-                    continue;
-                }
                 while stack
                     .last()
-                    .is_some_and(|&o| op < o || (op == o && !op.is_r_assoc()))
+                    .is_some_and(|&o| o != Op::LPn && (op < o || (op == o && !op.is_r_assoc())))
                 {
                     output.push(Math::Operator(stack.pop().unwrap()));
                 }
@@ -114,6 +125,7 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     for op in stack.into_iter().rev() {
         output.push(Math::Operator(op));
     }
+    println!("{:?}", output);
     let points = output
         .iter()
         .filter_map(|m| match m {
