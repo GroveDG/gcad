@@ -152,7 +152,7 @@ impl Statement {
         let mut points = self
             .points[..self.points.len()-1]
             .iter()
-            .map(|p| point_map.get(p).cloned())
+            .map(|p| point_map.get(p).copied())
             .collect::<Option<Vec<_>>>()?;
         Some(Quantity {
             func: match &self.s_type {
@@ -165,7 +165,7 @@ impl Statement {
                         &mut m
                             .points
                             .iter()
-                            .map(|p| point_map.get(p).cloned())
+                            .map(|p| point_map.get(p).copied())
                             .collect::<Option<Vec<_>>>()?,
                     );
                     let m_func = m.func().ok()?;
