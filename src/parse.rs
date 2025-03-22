@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 
 mod math;
 
@@ -17,8 +14,8 @@ impl Default for ParseErr {
         Nothing
     }
 }
-use math::{parse_math, parse_vector};
 use ParseErr::*;
+use math::{MathExpr, parse_math, parse_vector};
 impl Display for ParseErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -32,7 +29,7 @@ impl Display for ParseErr {
 
 use gsolve::{
     Order, PID,
-    math::{Geo, Number, Vector},
+    math::{Geo, Vector},
     order::Quantity,
 };
 use multimap::MultiMap;
@@ -80,14 +77,14 @@ impl Figure {
         for statement in statements {
             // Origins are roots.
             if let StatementType::Origin(_) = statement.s_type {
-                roots.push(statement.target.clone());
+                roots.push(statement.target().clone());
             }
             // Link dependencies to the target.
-            for dependency in statement.points.iter().cloned() {
-                tree.insert(dependency, statement.target.clone());
+            for dependency in statement.points[..statement.points.len()-1].iter().cloned() {
+                tree.insert(dependency, statement.target().clone());
             }
             // Map the target to their statements.
-            map.insert(statement.target.clone(), statement);
+            map.insert(statement.target().clone(), statement);
         }
 
         let mut fig = Figure::default();
@@ -109,54 +106,84 @@ pub fn parse(document: &str) -> Result<Figure, String> {
     Figure::from_statements(statements)
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum StatementType {
     Origin(Vector),
-    Distance(Number),
-    Orientation(Number),
+    Quantity(QuantityType, MathExpr),
+}
+#[derive(Debug, Clone, Copy)]
+pub enum QuantityType {
+    Distance,
+    Orientation,
+}
+impl QuantityType {
+    fn parser(&self) -> fn(&mut &str) -> Result<Vec<String>, ParseErr> {
+        match self {
+            Self::Distance => parse_distance,
+            Self::Orientation => parse_orientation,
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Statement {
-    target: String,
     s_type: StatementType,
     points: Vec<String>,
 }
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.s_type {
+        match &self.s_type {
             StatementType::Origin(v) => {
                 let p = &self.points[0];
                 write!(f, "{p} = {v}")
             }
-            StatementType::Distance(n) => {
+            StatementType::Quantity(t, m) => {
                 let p0 = &self.points[0];
                 let p1 = &self.points[1];
-                write!(f, "|{p0} {p1}| = {n}")
-            }
-            StatementType::Orientation(n) => {
-                let p0 = &self.points[0];
-                let p1 = &self.points[1];
-                write!(f, "<{p0} {p1}> = {n}")
+                match t {
+                    QuantityType::Distance => write!(f, "|{p0} {p1}| = {m:?}"),
+                    QuantityType::Orientation => write!(f, "<{p0} {p1}> = {m:?}"),
+                }
             }
         }
     }
 }
 impl Statement {
     fn quantity(&self, point_map: &HashMap<String, PID>) -> Option<Quantity> {
+        let mut points = self
+            .points[..self.points.len()-1]
+            .iter()
+            .map(|p| point_map.get(p).cloned())
+            .collect::<Option<Vec<_>>>()?;
         Some(Quantity {
-            func: match self.s_type {
-                StatementType::Origin(v) => Box::new(move |_| vec![Geo::Point(v)]),
-                StatementType::Distance(n) => Box::new(move |pos| vec![Geo::Circle(pos[0], n)]),
-                StatementType::Orientation(n) => {
-                    Box::new(move |pos| vec![Geo::Ray(pos[0], Vector::from_angle(n))])
+            func: match &self.s_type {
+                StatementType::Origin(v) => {
+                    let v = *v;
+                    Box::new(move |_| vec![Geo::Point(v)])
+                }
+                StatementType::Quantity(t, m) => {
+                    points.append(
+                        &mut m
+                            .points
+                            .iter()
+                            .map(|p| point_map.get(p).cloned())
+                            .collect::<Option<Vec<_>>>()?,
+                    );
+                    let m_func = m.func().ok()?;
+                    match t {
+                        QuantityType::Distance => {
+                            Box::new(move |pos| vec![Geo::Circle(pos[0], m_func(&pos[1..]))])
+                        }
+                        QuantityType::Orientation => Box::new(move |pos| {
+                            vec![Geo::Ray(pos[0], Vector::from_angle(m_func(&pos[1..])))]
+                        }),
+                    }
                 }
             },
-            points: self
-                .points
-                .iter()
-                .map(|p| point_map.get(p).cloned())
-                .collect::<Option<Vec<_>>>()?,
+            points,
         })
+    }
+    fn target(&self) -> &String {
+        self.points.last().unwrap()
     }
 }
 
@@ -181,34 +208,21 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
     let exprs: Vec<_> = line.split("=").map(|e| e.trim()).collect();
 
     let mut errs = Vec::new();
-    let parsers: [(
-        fn(&str) -> Result<(String, Vec<String>), ParseErr>,
-        Box<dyn Fn(&str) -> Result<StatementType, ParseErr>>,
-    ); 2] = [
-        (
-            parse_distance,
-            Box::new(|mut v| Ok(StatementType::Distance(parse_math(&mut v)?))),
-        ),
-        (
-            parse_orientation,
-            Box::new(|mut v| Ok(StatementType::Orientation(parse_math(&mut v)?))),
-        ),
-    ];
-    'parsers: for (expr_parser, value_parser) in parsers {
+    'parsers: for qt in [QuantityType::Distance, QuantityType::Orientation] {
         let mut statements = Vec::new();
-        for expr in exprs[..exprs.len() - 1].iter() {
-            let parts = match (expr_parser)(expr) {
+        for mut expr in exprs[..exprs.len() - 1].iter().copied() {
+            let points = match (qt.parser())(&mut expr) {
                 Ok(c) => c,
                 Err(e) => {
                     errs.push(e);
                     continue 'parsers;
                 }
             };
-            statements.push(parts);
+            statements.push(points);
         }
-        let s_type = if let Some(expr) = exprs.last() {
-            (value_parser)(expr).map_err(|err| match err {
-                Nothing => match (expr_parser)(expr) {
+        let n = if let Some(mut expr) = exprs.last().copied() {
+            parse_math(expr).map_err(|err| match err {
+                Nothing => match (qt.parser())(&mut expr) {
                     Ok(_) => No("value"),
                     Err(e) => e,
                 },
@@ -219,9 +233,8 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
         }?;
         return Ok(statements
             .into_iter()
-            .map(|(target, points)| Statement {
-                target,
-                s_type,
+            .map(|points| Statement {
+                s_type: StatementType::Quantity(qt, n.clone()),
                 points,
             })
             .collect());
@@ -243,34 +256,31 @@ fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
         Vector::ZERO
     };
     Ok(vec![Statement {
-        target: p.to_string(),
         s_type: StatementType::Origin(v),
-        points: vec![],
+        points: vec![p.to_string()],
     }])
 }
 
-fn parse_distance(mut expr: &str) -> Result<(String, Vec<String>), ParseErr> {
-    literal("|")(&mut expr).ok_or(Nothing)?;
-    space(&mut expr);
-    let p0 = word(&mut expr).ok_or(No("point"))?;
-    space(&mut expr).ok_or(No("space"))?;
-    let p1 = word(&mut expr).ok_or(No("point"))?;
-    space(&mut expr);
-    literal("|")(&mut expr).ok_or(No("|"))?;
-    end(expr).ok_or(Extra)?;
-    Ok((p1.to_string(), vec![p0.to_string()]))
+fn parse_distance(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
+    literal("|")(expr).ok_or(Nothing)?;
+    space(expr);
+    let p0 = word(expr).ok_or(No("point"))?;
+    space(expr).ok_or(No("space"))?;
+    let p1 = word(expr).ok_or(No("point"))?;
+    space(expr);
+    literal("|")(expr).ok_or(No("|"))?;
+    Ok(vec![p0.to_string(), p1.to_string()])
 }
 
-fn parse_orientation(mut expr: &str) -> Result<(String, Vec<String>), ParseErr> {
-    literal("<")(&mut expr).ok_or(Nothing)?;
-    space(&mut expr);
-    let p0 = word(&mut expr).ok_or(No("point"))?;
-    space(&mut expr).ok_or(No("space"))?;
-    let p1 = word(&mut expr).ok_or(No("point"))?;
-    space(&mut expr);
-    literal(">")(&mut expr).ok_or(No(">"))?;
-    end(expr).ok_or(Extra)?;
-    Ok((p1.to_string(), vec![p0.to_string()]))
+fn parse_orientation(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
+    literal("<")(expr).ok_or(Nothing)?;
+    space(expr);
+    let p0 = word(expr).ok_or(No("point"))?;
+    space(expr).ok_or(No("space"))?;
+    let p1 = word(expr).ok_or(No("point"))?;
+    space(expr);
+    literal(">")(expr).ok_or(No(">"))?;
+    Ok(vec![p0.to_string(), p1.to_string()])
 }
 
 const fn take_while<'a>(

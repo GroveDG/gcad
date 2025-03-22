@@ -6,29 +6,81 @@ use std::{
 
 use super::{
     ParseErr::{self, *},
-    literal, space, take_while,
+    QuantityType, literal, parse_distance, parse_orientation, space, take_while,
 };
 use gsolve::math::{Number, Vector};
 
-#[derive(Debug)]
-enum Math {
+#[derive(Debug, Clone)]
+pub struct MathExpr {
+    expr: Vec<Math>,
+    pub(super) points: Vec<String>,
+}
+impl MathExpr {
+    pub(super) fn func(&self) -> Result<Box<dyn Fn(&[Vector]) -> Number>, ParseErr> {
+        let mut stack: VecDeque<Box<dyn Fn(&[Vector]) -> f64>> = VecDeque::new();
+
+        for m in &self.expr {
+            match m {
+                Math::Operand(o) => stack.push_back(match o {
+                    Operand::Constant(n) => {
+                        let n = *n;
+                        Box::new(move |_| n)
+                    }
+                    Operand::Quantity(t, _) => match t {
+                        QuantityType::Distance => Box::new(|pos| -> Number { pos[0].dist(pos[1]) }),
+                        QuantityType::Orientation => {
+                            Box::new(|pos| -> Number { (pos[1] - pos[0]).angle() })
+                        }
+                    },
+                }),
+                Math::Operator(op) => {
+                    let lhs = stack.pop_front().ok_or(Invalid)?;
+                    let rhs = stack.pop_front().ok_or(Invalid)?;
+                    let op_func = op.func().ok_or(Invalid)?;
+                    stack.push_back(Box::new(move |pos| (op_func)(lhs(pos), rhs(pos))));
+                }
+            }
+        }
+        if stack.len() != 1 {
+            return Err(Invalid);
+        }
+        Ok(stack.pop_front().unwrap())
+    }
+}
+#[derive(Debug, Clone)]
+pub enum Math {
     Operand(Operand),
     Operator(Op),
 }
-#[derive(Debug)]
-enum Operand {
+#[derive(Debug, Clone)]
+pub enum Operand {
     Constant(Number),
+    Quantity(QuantityType, Vec<String>),
 }
 
 // https://mathcenter.oxford.emory.edu/site/cs171/shuntingYardAlgorithm/
-pub(super) fn parse_math(expr: &mut &str) -> Result<Number, ParseErr> {
+pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     let mut output = Vec::new();
     let mut stack: Vec<Op> = Vec::new();
+
     while !expr.is_empty() {
-        output.push(Math::Operand(Operand::Constant(parse_number(expr)?)));
-        let Some(op) = parse_op(expr) else {
+        output.push(Math::Operand(
+            parse_distance(&mut expr)
+                .map(|p| Operand::Quantity(QuantityType::Distance, p))
+                .or_else(|_| {
+                    parse_orientation(&mut expr)
+                        .map(|p| Operand::Quantity(QuantityType::Orientation, p))
+                })
+                .or_else(|_| parse_number(&mut expr).map(|n| Operand::Constant(n)))?,
+        ));
+        space(&mut expr);
+        let Some(op) = parse_op(&mut expr) else {
+            if !expr.is_empty() {
+                return Err(Extra);
+            }
             break;
         };
+        space(&mut expr);
         match op {
             Op::LPn => {
                 stack.push(op);
@@ -62,7 +114,22 @@ pub(super) fn parse_math(expr: &mut &str) -> Result<Number, ParseErr> {
     for op in stack.into_iter().rev() {
         output.push(Math::Operator(op));
     }
-    Ok(compute_math(output)?)
+    let points = output
+        .iter()
+        .filter_map(|m| match m {
+            Math::Operand(operand) => match operand {
+                Operand::Quantity(_, points) => Some(points),
+                _ => None,
+            },
+            _ => None,
+        })
+        .flatten()
+        .cloned()
+        .collect();
+    Ok(MathExpr {
+        expr: output,
+        points,
+    })
 }
 
 pub(super) fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
@@ -107,29 +174,8 @@ pub(super) fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
     n.parse().map_err(|_| Invalid)
 }
 
-fn compute_math(math: Vec<Math>) -> Result<Number, ParseErr> {
-    let mut stack = VecDeque::new();
-    println!("{:?}", math);
-    for m in math {
-        match m {
-            Math::Operand(o) => stack.push_back(match o {
-                Operand::Constant(n) => n,
-            }),
-            Math::Operator(op) => {
-                let lhs = stack.pop_front().ok_or(Invalid)?;
-                let rhs = stack.pop_front().ok_or(Invalid)?;
-                stack.push_back((op.func().ok_or(Invalid)?)(lhs, rhs));
-            }
-        }
-    }
-    if stack.len() != 1 {
-        return Err(Invalid);
-    }
-    Ok(stack[0])
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Op {
+pub enum Op {
     Add,
     Sub,
     Mul,
