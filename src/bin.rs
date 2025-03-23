@@ -2,9 +2,19 @@
 
 mod parse;
 
+use std::{
+    collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher, RandomState},
+};
+
 use eframe::{
-    egui::{self, Color32, Pos2, Rect, Sense, Stroke, TextEdit, Ui},
+    egui::{self, Color32, FontId, Pos2, Rect, Sense, Stroke, TextEdit, Ui},
     emath::RectTransform,
+};
+use gsolve::math::Vector;
+use parse::{
+    Figure,
+    ParseErr::{self, *},
 };
 
 fn main() -> eframe::Result {
@@ -18,8 +28,43 @@ fn main() -> eframe::Result {
 #[derive(Default)]
 struct MyApp {
     document: String,
+    prev_str_hash: u64,
+    prev_parsed_hash: u64,
+    solution: HashMap<String, Vector>,
 }
+impl MyApp {
+    fn update_fig(&mut self) -> Result<(), ParseErr> {
+        let str_hash = {
+            let mut hasher = DefaultHasher::new();
+            self.document.hash(&mut hasher);
+            hasher.finish()
+        };
+        if self.prev_str_hash == str_hash {
+            return Ok(());
+        }
+        self.prev_str_hash = str_hash;
 
+        let statements = parse::parse(&self.document)?;
+
+        let parsed_hash = {
+            let mut hasher = DefaultHasher::new();
+            statements.hash(&mut hasher);
+            hasher.finish()
+        };
+        if self.prev_parsed_hash == parsed_hash {
+            return Ok(());
+        }
+        self.prev_parsed_hash = parsed_hash;
+
+        let fig = Figure::from_statements(statements)?;
+        let pos = fig.order.solve().map_err(|_| Invalid)?;
+
+        self.solution =
+            HashMap::from_iter(fig.point_map.into_iter().map(|(point, i)| (point, pos[i])));
+
+        Ok(())
+    }
+}
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::SidePanel::left("document").show(ctx, |ui| {
@@ -31,22 +76,24 @@ impl eframe::App for MyApp {
             );
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            let fig = match parse::parse(&self.document) {
-                Ok(fig) => fig,
-                Err(e) => return println!("{}", e),
+            if let Err(e) = self.update_fig() {
+                println!("{}", e);
+                return;
             };
-            let pos = match fig.order.solve() {
-                Ok(pos) => pos,
-                Err(e) => return println!("{}", e),
+
+            let solution: HashMap<&String, Pos2, RandomState> = HashMap::from_iter(self.solution.iter().map(|(point, p)| {
+                (
+                    point,
+                    Pos2 {
+                        x: p.x as f32,
+                        y: p.y as f32,
+                    },
+                )
+            }));
+            let Some(mut bb) = bounding_box(solution.values().copied()) else {
+                return;
             };
-            let pos: Vec<_> = pos
-                .into_iter()
-                .map(|p| Pos2 {
-                    x: p.x as f32,
-                    y: p.y as f32,
-                })
-                .collect();
-            let Some(bb) = bounding_box(&pos) else { return };
+            std::mem::swap(&mut bb.min, &mut bb.max);
             let a = bb.size().x / bb.size().y;
             let mut size = ui.available_size();
             let b = size.x / size.y;
@@ -60,8 +107,10 @@ impl eframe::App for MyApp {
             (centerer)(ui, |ui: &mut Ui| {
                 let (response, canvas) = ui.allocate_painter(size, Sense::empty());
                 let transform = RectTransform::from_to(bb, response.rect);
-                for p in pos {
-                    canvas.circle(transform.transform_pos(p), 1., Color32::WHITE, Stroke::NONE);
+                for (point, p) in solution {
+                    let p = transform.transform_pos(p);
+                    canvas.circle(p, 1., Color32::WHITE, Stroke::NONE);
+                    canvas.text(p, egui::Align2::LEFT_TOP, point, FontId::default(), Color32::GRAY);
                 }
                 response
             });
@@ -69,12 +118,9 @@ impl eframe::App for MyApp {
     }
 }
 
-fn bounding_box(pos: &[Pos2]) -> Option<Rect> {
-    if pos.is_empty() {
-        return None;
-    }
-    let mut min = pos[0];
-    let mut max = pos[0];
+fn bounding_box(mut pos: impl Iterator<Item = Pos2>) -> Option<Rect> {
+    let mut min = pos.next()?;
+    let mut max = min;
     for p in pos {
         min.x = min.x.min(p.x);
         min.y = min.y.min(p.y);

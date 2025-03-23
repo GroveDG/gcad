@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 mod math;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ParseErr {
+pub(super) enum ParseErr {
     Nothing,
     No(&'static str),
     Invalid,
@@ -67,7 +67,7 @@ impl Figure {
             self.add_recursive(next, tree, map);
         }
     }
-    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, String> {
+    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, ParseErr> {
         let mut map = MultiMap::new();
         let mut roots = Vec::new();
         let mut tree = MultiMap::new();
@@ -98,20 +98,20 @@ impl Figure {
     }
 }
 
-pub fn parse(document: &str) -> Result<Figure, String> {
+pub fn parse(document: &str) -> Result<Vec<Statement>, ParseErr> {
     let mut statements = Vec::new();
     for line in document.lines() {
-        statements.append(&mut parse_line(line).map_err(|e| e.to_string())?);
+        statements.append(&mut parse_line(line)?);
     }
-    Figure::from_statements(statements)
+    Ok(statements)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum StatementType {
     Origin(Vector),
     Quantity(QuantityType, MathExpr),
 }
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub enum QuantityType {
     Distance,
     Orientation,
@@ -124,7 +124,7 @@ impl QuantityType {
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct Statement {
     s_type: StatementType,
     points: Vec<String>,

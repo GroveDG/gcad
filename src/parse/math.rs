@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     f64::consts::{PI, TAU},
+    hash::Hash,
     ops::{Add, Div, Mul, Sub},
 };
 
@@ -10,7 +11,7 @@ use super::{
 };
 use gsolve::math::{Number, Vector};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct MathExpr {
     expr: Vec<Math>,
     pub(super) points: Vec<String>,
@@ -47,7 +48,7 @@ impl MathExpr {
         Ok(stack.pop_front().unwrap())
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Math {
     Operand(Operand),
     Operator(Op),
@@ -56,6 +57,17 @@ pub enum Math {
 pub enum Operand {
     Constant(Number),
     Quantity(QuantityType, Vec<String>),
+}
+impl Hash for Operand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Operand::Constant(n) => n.to_be_bytes().hash(state),
+            Operand::Quantity(quantity_type, points) => {
+                quantity_type.hash(state);
+                points.hash(state);
+            }
+        }
+    }
 }
 
 // https://mathcenter.oxford.emory.edu/site/cs171/shuntingYardAlgorithm/
@@ -66,7 +78,6 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     'parsing: loop {
         while let Some(op) = parse_op(&mut expr) {
             if op != Op::LPn {
-                println!("{}", expr);
                 return Err(Invalid);
             }
             stack.push(op);
@@ -108,10 +119,6 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
                 return Err(Invalid);
             }
             _ => {
-                let Some(&o) = stack.last() else {
-                    stack.push(op);
-                    continue;
-                };
                 while stack
                     .last()
                     .is_some_and(|&o| o != Op::LPn && (op < o || (op == o && !op.is_r_assoc())))
@@ -125,7 +132,6 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     for op in stack.into_iter().rev() {
         output.push(Math::Operator(op));
     }
-    println!("{:?}", output);
     let points = output
         .iter()
         .filter_map(|m| match m {
@@ -186,7 +192,7 @@ pub(super) fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
     n.parse().map_err(|_| Invalid)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
     Add,
     Sub,
