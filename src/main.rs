@@ -3,9 +3,9 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher, RandomState},
 };
 
-use dioxus::{html::circle, prelude::*};
+use dioxus::prelude::*;
 use gsolve::math::Vector;
-use parse::{Figure, ParseErr};
+use parse::Figure;
 
 mod parse;
 
@@ -16,7 +16,11 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        GCADDoc {  }
+        document::Link {
+            rel: "stylesheet",
+            href: asset!("/assets/main.css")
+        },
+        GCADDoc { }
     }
 }
 
@@ -28,21 +32,11 @@ fn GCADDoc() -> Element {
         use_signal(HashMap::default);
     let mut err = use_signal(String::default);
     let (min, size) = bounding_box(solution.read().values().copied()).unwrap_or_default();
+    let svg_font_size = size.y / 30.;
 
     rsx! {
-        svg {
-            style: "transform: scaleY(-1)",
-            view_box: "{min.x} {min.y} {size.x} {size.y}",
-            for (point, pos) in solution.cloned() {
-                circle {
-                    cx: pos.x,
-                    cy: pos.y,
-                    r: 1,
-                    fill: "black"
-                }
-            },
-        },
         textarea {
+            id: "gcad-document",
             value: "{doc}",
             oninput: move |event| {
                 doc.set(event.value());
@@ -76,7 +70,38 @@ fn GCADDoc() -> Element {
                 })
             },
         },
-        "{err}"
+        div {
+            id: "gcad-display-area",
+            svg {
+                id: "gcad-display",
+                view_box: "{min.x} {min.y} {size.x} {size.y}",
+                width: size.x,
+                height: size.y,
+                style {
+                    "circle {{
+                        fill: "black";
+                    }}"
+                    ".label {{
+                        fill: black;
+                        font: italic {svg_font_size}px sans-serif;
+                    }}"
+                },
+                for (point, pos) in solution.cloned() {
+                    circle {
+                        cx: pos.x,
+                        cy: pos.y,
+                        r: svg_font_size/6.,
+                    }
+                    text {
+                        class: "label",
+                        x: pos.x,
+                        y: pos.y - svg_font_size/2.,
+                        "{point}",
+                    }
+                },
+            },
+            "{err}"
+        }
     }
 }
 
@@ -90,7 +115,7 @@ fn bounding_box(mut pos: impl Iterator<Item = Vector>) -> Option<(Vector, Vector
         max.y = max.y.max(p.y);
     }
     let size = max - min;
-    let margin = (size.x.max(size.y) * 0.25).max(1.);
+    let margin = (size.x.max(size.y) * 0.25).max(3.);
     min.x -= margin;
     min.y -= margin;
     max.x += margin;

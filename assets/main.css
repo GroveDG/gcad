@@ -1,46 +1,34 @@
-/* App-wide styling */
-body {
-    background-color: #0f1116;
-    color: #ffffff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 20px;
-}
-
-#hero {
+body, #main {
     margin: 0;
+    height: 100vh;
+    width: 100vw;
+}
+
+#main {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
 }
 
-#links {
-    width: 400px;
-    text-align: left;
-    font-size: x-large;
-    color: white;
-    display: flex;
-    flex-direction: column;
+#gcad-document {
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    resize: horizontal;
+    overflow-x: scroll;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: scroll;
 }
 
-#links a {
-    color: white;
-    text-decoration: none;
-    margin-top: 20px;
-    margin: 10px 0px;
-    border: white 1px solid;
-    border-radius: 5px;
-    padding: 10px;
+#gcad-display-area {
+    height: 100%;
+    flex-grow: 1;
+    box-sizing: border-box;
+    margin: 0;
 }
 
-#links a:hover {
-    background-color: #1f1f1f;
-    cursor: pointer;
+#gcad-display {
+    height: 100%;
+    width: 100%;
 }
-
-#header {
-    max-width: 1200px;
-}
-
-
-
