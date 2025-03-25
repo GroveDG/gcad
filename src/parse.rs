@@ -14,8 +14,8 @@ impl Default for ParseErr {
         Nothing
     }
 }
+use math::{parse_math, parse_vector, MathExpr};
 use ParseErr::*;
-use math::{MathExpr, parse_math, parse_vector};
 impl Display for ParseErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -28,9 +28,9 @@ impl Display for ParseErr {
 }
 
 use gsolve::{
-    Order, PID,
     math::{Geo, Vector},
     order::Quantity,
+    Order, PID,
 };
 use multimap::MultiMap;
 
@@ -62,7 +62,7 @@ impl Figure {
         let pid = self.order.add_point(quantities);
         self.point_map.insert(target.clone(), pid);
         map.remove(target); // Unfortunate drop.
-        // Add all dependents.
+                            // Add all dependents.
         for next in tree.get_vec(target).map(|v| v.iter()).unwrap_or_default() {
             self.add_recursive(next, tree, map);
         }
@@ -80,7 +80,10 @@ impl Figure {
                 roots.push(statement.target().clone());
             }
             // Link dependencies to the target.
-            for dependency in statement.points[..statement.points.len()-1].iter().cloned() {
+            for dependency in statement.points[..statement.points.len() - 1]
+                .iter()
+                .cloned()
+            {
                 tree.insert(dependency, statement.target().clone());
             }
             // Map the target to their statements.
@@ -149,8 +152,7 @@ impl Display for Statement {
 }
 impl Statement {
     fn quantity(&self, point_map: &HashMap<String, PID>) -> Option<Quantity> {
-        let mut points = self
-            .points[..self.points.len()-1]
+        let mut points = self.points[..self.points.len() - 1]
             .iter()
             .map(|p| point_map.get(p).copied())
             .collect::<Option<Vec<_>>>()?;
@@ -220,7 +222,7 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
             };
             statements.push(points);
         }
-        let n = if let Some(mut expr) = exprs.last().copied() {
+        let n = match if let Some(mut expr) = exprs.last().copied() {
             parse_math(expr).map_err(|err| match err {
                 Nothing => match (qt.parser())(&mut expr) {
                     Ok(_) => No("value"),
@@ -230,7 +232,13 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
             })
         } else {
             Err(Nothing)
-        }?;
+        } {
+            Ok(n) => n,
+            Err(e) => {
+                errs.push(e);
+                continue 'parsers;
+            }
+        };
         return Ok(statements
             .into_iter()
             .map(|points| Statement {
@@ -325,5 +333,9 @@ const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Option<&'a st
 }
 
 const fn end(input: &str) -> Option<()> {
-    if input.is_empty() { Some(()) } else { None }
+    if input.is_empty() {
+        Some(())
+    } else {
+        None
+    }
 }

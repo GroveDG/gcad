@@ -1,25 +1,30 @@
 [package]
 name = "gcad"
 version = "0.1.0"
-authors = ["GroveDG"]
-description = "2D CAD with geometry notation"
-repository = "https://github.com/GroveDG/gcad"
-edition = "2024"
+authors = ["grovedgdev@gmail.com <grovedegroof@gmail.com>"]
+edition = "2021"
 
-[package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
-
-[[bin]]
-name = "gcad"
-path = "src/bin.rs"
-
-[profile.release]
-lto = true          # Enable link-time optimization
-codegen-units = 1   # Reduce number of codegen units to increase optimizations
-panic = 'abort'     # Abort on panic
-strip = true        # Strip symbols from binary*
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = "0.31.1"
+dioxus = { version = "0.6.0", features = [] }
 gsolve = { path = "../gsolve" }
 multimap = "0.10.0"
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
