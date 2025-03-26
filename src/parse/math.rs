@@ -1,13 +1,14 @@
 use std::{
     collections::VecDeque,
-    f64::consts::{PI, TAU},
+    f64::consts::{E, PI, TAU},
     hash::Hash,
     ops::{Add, Div, Mul, Sub},
 };
 
 use super::{
-    ParseErr::{self, *},
-    QuantityType, literal, parse_distance, parse_orientation, space, take_while,
+    literal, parse_distance, parse_orientation, space, take_while, ParseErr,
+    ParseErrType::{self, *},
+    QuantityType,
 };
 use gsolve::math::{Number, Vector};
 
@@ -17,7 +18,7 @@ pub struct MathExpr {
     pub(super) points: Vec<String>,
 }
 impl MathExpr {
-    pub(super) fn func(&self) -> Result<Box<dyn Fn(&[Vector]) -> Number>, ParseErr> {
+    pub(super) fn func(&self) -> Result<Box<dyn Fn(&[Vector]) -> Number>, ParseErrType> {
         let mut stack: VecDeque<Box<dyn Fn(&[Vector]) -> f64>> = VecDeque::new();
 
         for m in &self.expr {
@@ -78,7 +79,7 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
     'parsing: loop {
         while let Some(op) = parse_op(&mut expr) {
             if op != Op::LPn {
-                return Err(Invalid);
+                return Err(ParseErr(Invalid, expr.as_ptr()));
             }
             stack.push(op);
             space(&mut expr);
@@ -96,14 +97,14 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
         let op = loop {
             let Some(op) = parse_op(&mut expr) else {
                 if !expr.is_empty() {
-                    return Err(Extra);
+                    return Err(ParseErr(Extra, expr.as_ptr()));
                 } else {
                     break 'parsing;
                 }
             };
             if op == Op::RPn {
                 loop {
-                    let op = stack.pop().ok_or(No("("))?;
+                    let op = stack.pop().ok_or(ParseErr(No("("), expr.as_ptr()))?;
                     if op == Op::LPn {
                         break;
                     }
@@ -116,7 +117,7 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
         space(&mut expr);
         match op {
             Op::LPn | Op::RPn => {
-                return Err(Invalid);
+                return Err(ParseErr(Invalid, expr.as_ptr()));
             }
             _ => {
                 while stack
@@ -151,21 +152,21 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
 }
 
 pub(super) fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
-    literal("(")(&mut expr).ok_or(Nothing)?;
+    literal("(")(&mut expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
     space(&mut expr);
-    let x = parse_number(&mut expr).map_err(|e| match e {
-        Nothing => No("number"),
-        _ => Invalid,
+    let x = parse_number(&mut expr).map_err(|e| match e.0 {
+        Nothing => ParseErr(No("number"), e.1),
+        _ => ParseErr(Invalid, e.1),
     })?;
     space(&mut expr);
-    literal(",")(&mut expr).ok_or(No(","))?;
+    literal(",")(&mut expr).ok_or(ParseErr(No(","), expr.as_ptr()))?;
     space(&mut expr);
-    let y = parse_number(&mut expr).map_err(|e| match e {
-        Nothing => No("number"),
-        _ => Invalid,
+    let y = parse_number(&mut expr).map_err(|e| match e.0 {
+        Nothing => ParseErr(No("number"), e.1),
+        _ => ParseErr(Invalid, e.1),
     })?;
     space(&mut expr);
-    literal(")")(&mut expr).ok_or(No(")"))?;
+    literal(")")(&mut expr).ok_or(ParseErr(No(")"), expr.as_ptr()))?;
     Ok(Vector { x, y })
 }
 
@@ -184,12 +185,18 @@ pub(super) fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
     {
         return Ok(TAU);
     }
+    if literal("E")(expr).is_some() || literal("e")(expr).is_some() {
+        return Ok(E);
+    }
     let mut n = literal("+")(expr)
         .or_else(|| literal("-")(expr))
         .unwrap_or_default()
         .to_string();
-    n.push_str(take_while(|c| c.is_ascii_digit() || c == '.', 1, usize::MAX)(expr).ok_or(Nothing)?);
-    n.parse().map_err(|_| Invalid)
+    n.push_str(
+        take_while(|c| c.is_ascii_digit() || c == '.', 1, usize::MAX)(expr)
+            .ok_or(ParseErr(Nothing, expr.as_ptr()))?,
+    );
+    n.parse().map_err(|_| ParseErr(Invalid, expr.as_ptr()))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

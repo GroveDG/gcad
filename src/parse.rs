@@ -3,20 +3,22 @@ use std::{collections::HashMap, fmt::Display};
 mod math;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ParseErr {
+pub(super) struct ParseErr(pub(super) ParseErrType, pub(super) *const u8);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ParseErrType {
     Nothing,
     No(&'static str),
     Invalid,
     Extra,
 }
-impl Default for ParseErr {
+impl Default for ParseErrType {
     fn default() -> Self {
         Nothing
     }
 }
 use math::{parse_math, parse_vector, MathExpr};
-use ParseErr::*;
-impl Display for ParseErr {
+use ParseErrType::*;
+impl Display for ParseErrType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Nothing => write!(f, "Nothing"),
@@ -67,7 +69,7 @@ impl Figure {
             self.add_recursive(next, tree, map);
         }
     }
-    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, ParseErr> {
+    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, ParseErrType> {
         let mut map = MultiMap::new();
         let mut roots = Vec::new();
         let mut tree = MultiMap::new();
@@ -193,13 +195,13 @@ fn parse_line(line: &str) -> Result<Vec<Statement>, ParseErr> {
     if line.is_empty() {
         return Ok(Vec::new());
     }
-    let mut err = Nothing;
+    let mut err = ParseErr(Nothing, line.as_ptr());
     for parser in [parse_origin, parse_multi_expr] {
         let e = match (parser)(line) {
             Ok(s) => return Ok(s),
             Err(e) => e,
         };
-        if err == Nothing {
+        if err.0 == Nothing {
             err = e;
         }
     }
@@ -220,18 +222,22 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
                     continue 'parsers;
                 }
             };
+            if !expr.is_empty() {
+                errs.push(ParseErr(Extra, expr.as_ptr()));
+                continue 'parsers;
+            }
             statements.push(points);
         }
         let n = match if let Some(mut expr) = exprs.last().copied() {
-            parse_math(expr).map_err(|err| match err {
+            parse_math(expr).map_err(|err| match err.0 {
                 Nothing => match (qt.parser())(&mut expr) {
-                    Ok(_) => No("value"),
+                    Ok(_) => ParseErr(No("value"), expr.as_ptr()),
                     Err(e) => e,
                 },
                 _ => err,
             })
         } else {
-            Err(Nothing)
+            Err(ParseErr(Nothing, exprs.last().unwrap_or(&line).as_ptr()))
         } {
             Ok(n) => n,
             Err(e) => {
@@ -250,13 +256,13 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
 
     let err = errs
         .into_iter()
-        .reduce(|err, e| if err == Nothing { e } else { err })
-        .unwrap_or_default();
+        .reduce(|err, e| if err.0 == Nothing { e } else { err })
+        .unwrap_or(ParseErr(Nothing, line.as_ptr()));
     Err(err)
 }
 
 fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
-    let p = word(&mut expr).ok_or(Nothing)?;
+    let p = word(&mut expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
     space(&mut expr);
     let v = if literal("=")(&mut expr).is_some() {
         parse_vector(expr.trim())?
@@ -270,24 +276,24 @@ fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
 }
 
 fn parse_distance(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
-    literal("|")(expr).ok_or(Nothing)?;
+    literal("|")(expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
     space(expr);
-    let p0 = word(expr).ok_or(No("point"))?;
-    space(expr).ok_or(No("space"))?;
-    let p1 = word(expr).ok_or(No("point"))?;
+    let p0 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
+    space(expr).ok_or(ParseErr(No("space"), expr.as_ptr()))?;
+    let p1 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
     space(expr);
-    literal("|")(expr).ok_or(No("|"))?;
+    literal("|")(expr).ok_or(ParseErr(No("|"), expr.as_ptr()))?;
     Ok(vec![p0.to_string(), p1.to_string()])
 }
 
 fn parse_orientation(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
-    literal("<")(expr).ok_or(Nothing)?;
+    literal("<")(expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
     space(expr);
-    let p0 = word(expr).ok_or(No("point"))?;
-    space(expr).ok_or(No("space"))?;
-    let p1 = word(expr).ok_or(No("point"))?;
+    let p0 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
+    space(expr).ok_or(ParseErr(No("space"), expr.as_ptr()))?;
+    let p1 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
     space(expr);
-    literal(">")(expr).ok_or(No(">"))?;
+    literal(">")(expr).ok_or(ParseErr(No(">"), expr.as_ptr()))?;
     Ok(vec![p0.to_string(), p1.to_string()])
 }
 
@@ -329,13 +335,5 @@ const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Option<&'a st
     move |i: &mut &'a str| {
         *i = i.strip_prefix(pattern)?;
         Some(pattern)
-    }
-}
-
-const fn end(input: &str) -> Option<()> {
-    if input.is_empty() {
-        Some(())
-    } else {
-        None
     }
 }
