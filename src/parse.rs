@@ -101,6 +101,10 @@ impl Figure {
             fig.add_recursive(&root, &tree, &mut map)
         }
 
+        if !map.is_empty() {
+            return Err(Invalid);
+        }
+
         Ok(fig)
     }
 }
@@ -194,7 +198,7 @@ impl Statement {
 }
 
 fn parse_line(line: &str) -> Result<Vec<Statement>, ParseErr> {
-    if line.is_empty() {
+    if blank(line) {
         return Ok(Vec::new());
     }
     let mut err = ParseErr(Nothing, line.as_ptr());
@@ -203,7 +207,7 @@ fn parse_line(line: &str) -> Result<Vec<Statement>, ParseErr> {
             Ok(s) => return Ok(s),
             Err(e) => e,
         };
-        if err.0 == Nothing {
+        if err.0 == Nothing && err.1 == line.as_ptr() {
             err = e;
         }
     }
@@ -211,7 +215,7 @@ fn parse_line(line: &str) -> Result<Vec<Statement>, ParseErr> {
 }
 
 fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
-    let exprs: Vec<_> = line.split("=").map(|e| e.trim()).collect();
+    let exprs: Vec<_> = line.split("=").map(|e| e.trim_start()).collect();
 
     let mut errs = Vec::new();
     'parsers: for qt in [QuantityType::Distance, QuantityType::Orientation] {
@@ -224,7 +228,7 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
                     continue 'parsers;
                 }
             };
-            if !expr.is_empty() {
+            if !blank(expr) {
                 errs.push(ParseErr(Extra, expr.as_ptr()));
                 continue 'parsers;
             }
@@ -258,7 +262,13 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
 
     let err = errs
         .into_iter()
-        .reduce(|err, e| if err.0 == Nothing { e } else { err })
+        .reduce(|err, e| {
+            if err.0 == Nothing && err.1 == line.as_ptr() {
+                e
+            } else {
+                err
+            }
+        })
         .unwrap_or(ParseErr(Nothing, line.as_ptr()));
     Err(err)
 }
@@ -267,7 +277,7 @@ fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
     let p = wrap(word(&mut expr), Nothing)?;
     space(&mut expr);
     let v = if literal("=")(&mut expr).is_ok() {
-        parse_vector(expr.trim())?
+        parse_vector(expr.trim_start())?
     } else {
         Vector::ZERO
     };
@@ -325,21 +335,30 @@ const fn take_while<'a>(
     }
 }
 
+#[inline]
 fn space<'a>(input: &mut &'a str) -> Result<&'a str, *const u8> {
     take_while(char::is_whitespace, 1, usize::MAX)(input)
 }
 
+#[inline]
 fn word<'a>(input: &mut &'a str) -> Result<&'a str, *const u8> {
     take_while(char::is_alphabetic, 1, usize::MAX)(input)
 }
 
+#[inline]
 const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Result<&'a str, *const u8> {
     move |i: &mut &'a str| {
-        *i = i.strip_prefix(pattern).ok_or(pattern.as_ptr())?;
+        *i = i.strip_prefix(pattern).ok_or(i.as_ptr())?;
         Ok(pattern)
     }
 }
 
+#[inline]
 pub(super) fn wrap<T>(res: Result<T, *const u8>, t: ParseErrType) -> Result<T, ParseErr> {
     res.map_err(|p| ParseErr(t, p))
+}
+
+#[inline]
+pub(super) fn blank(input: &str) -> bool {
+    input.trim().is_empty()
 }

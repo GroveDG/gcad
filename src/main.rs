@@ -31,6 +31,7 @@ fn GCADDoc() -> Element {
     let mut solution: Signal<HashMap<String, gsolve::math::Vector, RandomState>> =
         use_signal(HashMap::default);
     let mut err: Signal<Option<(String, String)>> = use_signal(|| None);
+    let mut debug_str = use_signal(String::new);
 
     let (min, size) = bounding_box(solution.read().values().copied()).unwrap_or_default();
     let svg_font_size = size.y / 30.;
@@ -52,6 +53,7 @@ fn GCADDoc() -> Element {
                             },
                             Ok(s) => s,
                         };
+                        debug_str.set(format!("{statements:?}"));
                         let new_hash = {
                             let mut hasher = DefaultHasher::new();
                             statements.hash(&mut hasher);
@@ -91,6 +93,7 @@ fn GCADDoc() -> Element {
         },
         div {
             id: "gcad-display-area",
+            "{debug_str}",
             svg {
                 id: "gcad-display",
                 view_box: "{min.x} {min.y} {size.x} {size.y}",
