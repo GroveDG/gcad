@@ -6,7 +6,7 @@ use std::{
 };
 
 use super::{
-    literal, parse_distance, parse_orientation, space, take_while, ParseErr,
+    literal, parse_distance, parse_orientation, space, take_while, wrap, ParseErr,
     ParseErrType::{self, *},
     QuantityType,
 };
@@ -152,50 +152,50 @@ pub(super) fn parse_math(mut expr: &str) -> Result<MathExpr, ParseErr> {
 }
 
 pub(super) fn parse_vector(mut expr: &str) -> Result<Vector, ParseErr> {
-    literal("(")(&mut expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
+    wrap(literal("(")(&mut expr), Nothing)?;
     space(&mut expr);
     let x = parse_number(&mut expr).map_err(|e| match e.0 {
         Nothing => ParseErr(No("number"), e.1),
         _ => ParseErr(Invalid, e.1),
     })?;
     space(&mut expr);
-    literal(",")(&mut expr).ok_or(ParseErr(No(","), expr.as_ptr()))?;
+    wrap(literal(",")(&mut expr), No(","))?;
     space(&mut expr);
     let y = parse_number(&mut expr).map_err(|e| match e.0 {
         Nothing => ParseErr(No("number"), e.1),
         _ => ParseErr(Invalid, e.1),
     })?;
     space(&mut expr);
-    literal(")")(&mut expr).ok_or(ParseErr(No(")"), expr.as_ptr()))?;
+    wrap(literal(")")(&mut expr), No(")"))?;
     Ok(Vector { x, y })
 }
 
 pub(super) fn parse_number(expr: &mut &str) -> Result<Number, ParseErr> {
-    if literal("PI")(expr).is_some()
-        || literal("Pi")(expr).is_some()
-        || literal("pi")(expr).is_some()
-        || literal("π")(expr).is_some()
+    if literal("PI")(expr).is_ok()
+        || literal("Pi")(expr).is_ok()
+        || literal("pi")(expr).is_ok()
+        || literal("π")(expr).is_ok()
     {
         return Ok(PI);
     }
-    if literal("TAU")(expr).is_some()
-        || literal("Tau")(expr).is_some()
-        || literal("tau")(expr).is_some()
-        || literal("τ")(expr).is_some()
+    if literal("TAU")(expr).is_ok()
+        || literal("Tau")(expr).is_ok()
+        || literal("tau")(expr).is_ok()
+        || literal("τ")(expr).is_ok()
     {
         return Ok(TAU);
     }
-    if literal("E")(expr).is_some() || literal("e")(expr).is_some() {
+    if literal("E")(expr).is_ok() || literal("e")(expr).is_ok() {
         return Ok(E);
     }
     let mut n = literal("+")(expr)
-        .or_else(|| literal("-")(expr))
+        .or_else(|_| literal("-")(expr))
         .unwrap_or_default()
         .to_string();
-    n.push_str(
-        take_while(|c| c.is_ascii_digit() || c == '.', 1, usize::MAX)(expr)
-            .ok_or(ParseErr(Nothing, expr.as_ptr()))?,
-    );
+    n.push_str(wrap(
+        take_while(|c| c.is_ascii_digit() || c == '.', 1, usize::MAX)(expr),
+        Nothing,
+    )?);
     n.parse().map_err(|_| ParseErr(Invalid, expr.as_ptr()))
 }
 

@@ -7,6 +7,7 @@ pub(super) struct ParseErr(pub(super) ParseErrType, pub(super) *const u8);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ParseErrType {
     Nothing,
+    Wrong,
     No(&'static str),
     Invalid,
     Extra,
@@ -25,6 +26,7 @@ impl Display for ParseErrType {
             No(s) => write!(f, "No {s}"),
             Invalid => write!(f, "Invalid"),
             Extra => write!(f, "Extra"),
+            Wrong => write!(f, "Wrong"),
         }
     }
 }
@@ -262,9 +264,9 @@ fn parse_multi_expr(line: &str) -> Result<Vec<Statement>, ParseErr> {
 }
 
 fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
-    let p = word(&mut expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
+    let p = wrap(word(&mut expr), Nothing)?;
     space(&mut expr);
-    let v = if literal("=")(&mut expr).is_some() {
+    let v = if literal("=")(&mut expr).is_ok() {
         parse_vector(expr.trim())?
     } else {
         Vector::ZERO
@@ -276,24 +278,24 @@ fn parse_origin(mut expr: &str) -> Result<Vec<Statement>, ParseErr> {
 }
 
 fn parse_distance(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
-    literal("|")(expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
+    wrap(literal("|")(expr), Nothing)?;
     space(expr);
-    let p0 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
-    space(expr).ok_or(ParseErr(No("space"), expr.as_ptr()))?;
-    let p1 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
+    let p0 = wrap(word(expr), No("point"))?;
+    wrap(space(expr), No("space"))?;
+    let p1 = wrap(word(expr), No("point"))?;
     space(expr);
-    literal("|")(expr).ok_or(ParseErr(No("|"), expr.as_ptr()))?;
+    wrap(literal("|")(expr), No("|"))?;
     Ok(vec![p0.to_string(), p1.to_string()])
 }
 
 fn parse_orientation(expr: &mut &str) -> Result<Vec<String>, ParseErr> {
-    literal("<")(expr).ok_or(ParseErr(Nothing, expr.as_ptr()))?;
+    wrap(literal("<")(expr), Nothing)?;
     space(expr);
-    let p0 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
-    space(expr).ok_or(ParseErr(No("space"), expr.as_ptr()))?;
-    let p1 = word(expr).ok_or(ParseErr(No("point"), expr.as_ptr()))?;
+    let p0 = wrap(word(expr), No("point"))?;
+    wrap(space(expr), No("space"))?;
+    let p1 = wrap(word(expr), No("point"))?;
     space(expr);
-    literal(">")(expr).ok_or(ParseErr(No(">"), expr.as_ptr()))?;
+    wrap(literal(">")(expr), No(">"))?;
     Ok(vec![p0.to_string(), p1.to_string()])
 }
 
@@ -301,7 +303,7 @@ const fn take_while<'a>(
     mut f: impl FnMut(char) -> bool,
     min: usize,
     max: usize,
-) -> impl FnMut(&mut &'a str) -> Option<&'a str> {
+) -> impl FnMut(&mut &'a str) -> Result<&'a str, *const u8> {
     move |input: &mut &'a str| {
         let mut chars = input.char_indices();
         let split = loop {
@@ -315,25 +317,29 @@ const fn take_while<'a>(
             }
         };
         if split < min || split >= max {
-            return None;
+            return Err(input.as_ptr());
         }
         let result = &input[..split];
         *input = &input[split..];
-        Some(result)
+        Ok(result)
     }
 }
 
-fn space<'a>(input: &mut &'a str) -> Option<&'a str> {
+fn space<'a>(input: &mut &'a str) -> Result<&'a str, *const u8> {
     take_while(char::is_whitespace, 1, usize::MAX)(input)
 }
 
-fn word<'a>(input: &mut &'a str) -> Option<&'a str> {
+fn word<'a>(input: &mut &'a str) -> Result<&'a str, *const u8> {
     take_while(char::is_alphabetic, 1, usize::MAX)(input)
 }
 
-const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Option<&'a str> {
+const fn literal<'a>(pattern: &'a str) -> impl Fn(&mut &'a str) -> Result<&'a str, *const u8> {
     move |i: &mut &'a str| {
-        *i = i.strip_prefix(pattern)?;
-        Some(pattern)
+        *i = i.strip_prefix(pattern).ok_or(pattern.as_ptr())?;
+        Ok(pattern)
     }
+}
+
+pub(super) fn wrap<T>(res: Result<T, *const u8>, t: ParseErrType) -> Result<T, ParseErr> {
+    res.map_err(|p| ParseErr(t, p))
 }
