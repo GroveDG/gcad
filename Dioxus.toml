@@ -5,6 +5,8 @@
 # HTML title tag content
 title = "GCAD"
 
+base_path = "gcad"
+
 # include `assets` in web platform
 [web.resource]
 
