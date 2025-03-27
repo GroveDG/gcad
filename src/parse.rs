@@ -71,7 +71,7 @@ impl Figure {
             self.add_recursive(next, tree, map);
         }
     }
-    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, ParseErrType> {
+    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, String> {
         let mut map = MultiMap::new();
         let mut roots = Vec::new();
         let mut tree = MultiMap::new();
@@ -84,10 +84,7 @@ impl Figure {
                 roots.push(statement.target().clone());
             }
             // Link dependencies to the target.
-            for dependency in statement.points[..statement.points.len() - 1]
-                .iter()
-                .cloned()
-            {
+            for dependency in statement.dependencies() {
                 tree.insert(dependency, statement.target().clone());
             }
             // Map the target to their statements.
@@ -102,7 +99,7 @@ impl Figure {
         }
 
         if !map.is_empty() {
-            return Err(Invalid);
+            return Err(format!("Unused {:?} {:?}", fig.point_map, map));
         }
 
         Ok(fig)
@@ -159,6 +156,17 @@ impl Display for Statement {
     }
 }
 impl Statement {
+    fn dependencies(&self) -> Vec<String> {
+        let mut points: Vec<String> = self.points[..self.points.len() - 1]
+            .iter()
+            .cloned()
+            .collect();
+        match &self.s_type {
+            StatementType::Quantity(t, m) => points.extend(m.points.iter().cloned()),
+            _ => {}
+        }
+        points
+    }
     fn quantity(&self, point_map: &HashMap<String, PID>) -> Option<Quantity> {
         let mut points = self.points[..self.points.len() - 1]
             .iter()

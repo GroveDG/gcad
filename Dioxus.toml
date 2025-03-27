@@ -3,7 +3,7 @@
 [web.app]
 
 # HTML title tag content
-title = "gcad"
+title = "GCAD"
 
 # include `assets` in web platform
 [web.resource]
@@ -19,3 +19,8 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
+[bundle]
+identifier = "com.grovedg"
+publisher = "GroveDG"
+category = "GraphicsAndDesign"
